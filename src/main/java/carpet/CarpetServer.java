@@ -35,7 +35,6 @@ import carpet.utils.MobAI;
 import carpet.utils.SpawnReporter;
 import com.mojang.brigadier.CommandDispatcher;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -43,7 +42,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLLoader;
 
+@Mod("carpet")
 public class CarpetServer // static for now - easier to handle all around the code, its one anyways
 {
     public static MinecraftServer minecraft_server;
@@ -73,7 +75,7 @@ public class CarpetServer // static for now - easier to handle all around the co
     // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
     // Gets called by Fabric Loader from a ServerModInitializer and a ClientModInitializer, in both to allow extensions 
     // to register before this call in a ModInitializer (declared in fabric.mod.json)
-    public static void onGameStarted()
+    public CarpetServer()
     {
         settingsManager = new carpet.settings.SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
         settingsManager.parseSettingsClass(CarpetSettings.class);
@@ -171,7 +173,7 @@ public class CarpetServer // static for now - easier to handle all around the co
         if (environment != Commands.CommandSelection.DEDICATED)
             PerfCommand.register(dispatcher);
         
-        if (FabricLoader.getInstance().isDevelopmentEnvironment())
+        if (!FMLLoader.isProduction())
             TestCommand.register(dispatcher);
         // todo 1.16 - re-registerer apps if that's a reload operation.
     }

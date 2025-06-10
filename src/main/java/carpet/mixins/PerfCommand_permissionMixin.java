@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(PerfCommand.class)
 public class PerfCommand_permissionMixin
 {
-    @Inject(method = "method_37340", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "lambda$register$0", at = @At("HEAD"), cancellable = true, remap = false)
     private static void canRun(CommandSourceStack source, CallbackInfoReturnable<Boolean> cir)
     {
         cir.setReturnValue(source.hasPermission(CarpetSettings.perfPermissionLevel));

@@ -23,8 +23,7 @@
       "carpet.CarpetServer::onGameStarted"
     ],
     "server": [
-      "carpet.CarpetServer::onGameStarted",
-      "carpet.utils.CarpetRulePrinter"
+      "carpet.CarpetServer::onGameStarted"
     ]
   },
   "mixins": [

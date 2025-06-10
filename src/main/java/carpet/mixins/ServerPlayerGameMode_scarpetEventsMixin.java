@@ -1,6 +1,9 @@
 package carpet.mixins;
 
 import carpet.fakes.ServerPlayerInteractionManagerInterface;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,8 +13,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,7 +20,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import static carpet.script.CarpetEventServer.Event.PLAYER_BREAK_BLOCK;
 import static carpet.script.CarpetEventServer.Event.PLAYER_INTERACTS_WITH_BLOCK;
@@ -38,18 +38,18 @@ public class ServerPlayerGameMode_scarpetEventsMixin implements ServerPlayerInte
 
     @Shadow public ServerLevel level;
 
-    @Inject(method = "destroyBlock", locals = LocalCapture.CAPTURE_FAILHARD, cancellable = true, at = @At(
+    @WrapOperation(
+            method = "destroyBlock", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/Block;playerWillDestroy(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V",
-            shift = At.Shift.BEFORE
+            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z"
     ))
-    private void onBlockBroken(BlockPos blockPos_1, CallbackInfoReturnable<Boolean> cir, BlockState blockState_1, BlockEntity be, Block b)
+    private boolean onBlockBroken(ServerPlayerGameMode instance, BlockPos blockPos, BlockState blockState, boolean canHarvest, Operation<Boolean> original)
     {
-        if(PLAYER_BREAK_BLOCK.onBlockBroken(player, blockPos_1, blockState_1)) {
-            this.level.sendBlockUpdated(blockPos_1, blockState_1, blockState_1, 3);
-            cir.setReturnValue(false);
-            cir.cancel();
+        if(PLAYER_BREAK_BLOCK.onBlockBroken(player, blockPos, blockState)) {
+            this.level.sendBlockUpdated(blockPos, blockState, blockState, 3);
+            return false;
         }
+        return original.call(instance, blockPos, blockState, canHarvest);
     }
 
     @Inject(method = "useItemOn", at = @At(

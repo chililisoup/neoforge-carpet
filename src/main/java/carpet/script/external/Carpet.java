@@ -15,25 +15,22 @@ import carpet.script.CarpetExpression;
 import carpet.script.CarpetScriptHost;
 import carpet.script.CarpetScriptServer;
 import carpet.script.Module;
-import carpet.script.exception.InternalExpressionException;
 import carpet.script.exception.LoadException;
 import carpet.script.utils.AppStoreManager;
 import carpet.script.value.MapValue;
 import carpet.script.value.StringValue;
 import carpet.utils.CarpetProfiler;
 import carpet.utils.Messenger;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.api.SemanticVersion;
-import net.fabricmc.loader.api.Version;
-import net.fabricmc.loader.api.VersionParsingException;
-import net.fabricmc.loader.api.metadata.version.VersionPredicate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.fml.loading.FMLPaths;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -151,9 +148,9 @@ public class Carpet
     @Nullable
     public static Module fetchGlobalModule(String name, boolean allowLibraries) throws IOException
     {
-        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT)
+        if (FMLLoader.getDist().isClient())
         {
-            Path globalFolder = FabricLoader.getInstance().getConfigDir().resolve("carpet/scripts");
+            Path globalFolder = FMLPaths.CONFIGDIR.get().resolve("carpet/scripts");
             if (!Files.exists(globalFolder))
             {
                 Files.createDirectories(globalFolder);
@@ -175,9 +172,9 @@ public class Carpet
 
     public static void addGlobalModules(final List<String> moduleNames, boolean includeBuiltIns) throws IOException
     {
-        if (includeBuiltIns && (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT))
+        if (includeBuiltIns && FMLLoader.getDist().isClient())
         {
-            Path globalScripts = FabricLoader.getInstance().getConfigDir().resolve("carpet/scripts");
+            Path globalScripts = FMLPaths.CONFIGDIR.get().resolve("carpet/scripts");
             if (!Files.exists(globalScripts))
             {
                 Files.createDirectories(globalScripts);
@@ -193,22 +190,14 @@ public class Carpet
 
     public static void assertRequirementMet(CarpetScriptHost host, String requiredModId, String stringPredicate)
     {
-        VersionPredicate predicate;
-        try
-        {
-            predicate = VersionPredicate.parse(stringPredicate);
-        }
-        catch (VersionParsingException e)
-        {
-            throw new InternalExpressionException("Failed to parse version conditions for '" + requiredModId + "' in 'requires': " + e.getMessage());
-        }
-
-        ModContainer mod = FabricLoader.getInstance().getModContainer(requiredModId).orElse(null);
+        ModContainer mod = ModList.get().getModContainerById(requiredModId).orElse(null);
         if (mod != null)
         {
-            Version presentVersion = mod.getMetadata().getVersion();
-            if (predicate.test(presentVersion) || (FabricLoader.getInstance().isDevelopmentEnvironment() && !(presentVersion instanceof SemanticVersion)))
-            { // in a dev env, mod version is usually replaced with ${version}, and that isn't semantic
+            ComparableVersion predicate = new ComparableVersion(stringPredicate);
+            ComparableVersion presentVersion = new ComparableVersion(mod.getModInfo().getVersion().toString());
+
+            if (predicate.compareTo(presentVersion) <= 0)
+            {
                 return;
             }
         }

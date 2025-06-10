@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(PersistentEntitySectionManager.class)
 public class PersistentEntitySectionManager_scarpetMixin
 {
-    @Inject(method = "addEntity(Lnet/minecraft/world/level/entity/EntityAccess;Z)Z", at = @At(
+    @Inject(method = "addEntityWithoutEvent(Lnet/minecraft/world/level/entity/EntityAccess;Z)Z", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/entity/Visibility;isTicking()Z"
     ))
