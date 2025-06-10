@@ -44,9 +44,9 @@ public class PistonStructureResolver_customStickyMixin {
         method = "addBlockLine",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z"
-        ),
-        remap = false
+            target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+            ordinal = 0
+        )
     )
     private boolean onAddBlockLineCanStickToEachOther(BlockState state, BlockState behindState) {
         if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
@@ -54,6 +54,18 @@ public class PistonStructureResolver_customStickyMixin {
         }
 
         return state.canStickTo(behindState);
+    }
+
+    @Redirect(
+            method = "addBlockLine",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                ordinal = 1
+            )
+    )
+    private boolean removeSecondBlockLineCheck(BlockState state, BlockState behindState) {
+        return true;
     }
 
     // fields that are needed because @Redirects cannot capture locals
@@ -77,9 +89,9 @@ public class PistonStructureResolver_customStickyMixin {
         method = "addBranchingBlocks",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z"
-        ),
-        remap = false
+            target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+            ordinal = 0
+        )
     )
     private boolean onAddBranchingBlocksCanStickToEachOther(BlockState neighborState, BlockState state, BlockPos pos) {
         if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
@@ -87,5 +99,17 @@ public class PistonStructureResolver_customStickyMixin {
         }
 
         return neighborState.canStickTo(state);
+    }
+
+    @Redirect(
+            method = "addBranchingBlocks",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                    ordinal = 1
+            )
+    )
+    private boolean removeSecondBranchingBlockCheck(BlockState neighborState, BlockState state, BlockPos pos) {
+        return true;
     }
 }
