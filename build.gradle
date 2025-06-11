@@ -13,7 +13,7 @@ tasks.named('wrapper', Wrapper).configure {
 	distributionType = Wrapper.DistributionType.BIN
 }
 
-version = port_version
+version = minecraft_version+'-'+port_version+'+v'+new Date().format('yyMMdd')
 group = mod_id
 
 repositories {
