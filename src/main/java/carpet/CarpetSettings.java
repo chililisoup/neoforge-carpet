@@ -857,13 +857,13 @@ public class CarpetSettings
                 //must been some startup thing
                 return newValue;
             }
-            
+
             applyLightBatchSizes(source.getServer(), newValue); // Apply new settings
-            
+
             return newValue;
         }
     }
-    
+
     @Rule(
             desc = "Changes maximum light tasks batch size",
             extra = {"Allows for a higher light suppression tolerance", "setting it to 5 - Default limit defined by the game"},
