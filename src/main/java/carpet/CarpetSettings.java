@@ -48,7 +48,7 @@ import static carpet.api.settings.RuleCategory.CLIENT;
 public class CarpetSettings
 {
     public static final String carpetVersion = ModList.get().getModContainerById("carpet").orElseThrow().getModInfo().getVersion().toString();
-    public static final int [] releaseTarget =  {
+    public static final int [] releaseTarget = {
             ModList.get().getModContainerById("minecraft").orElseThrow().getModInfo().getVersion().getMinorVersion(),
             ModList.get().getModContainerById("minecraft").orElseThrow().getModInfo().getVersion().getIncrementalVersion()
     };
