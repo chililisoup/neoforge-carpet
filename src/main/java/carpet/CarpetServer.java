@@ -38,7 +38,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLLoader;
 
 @Mod("carpet")
@@ -68,10 +70,15 @@ public class CarpetServer // static for now - easier to handle all around the co
         }
     }
 
+    public CarpetServer(IEventBus eventBus)
+    {
+        eventBus.addListener(this::onGameStarted);
+    }
+
     // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
     // Gets called by Fabric Loader from a ServerModInitializer and a ClientModInitializer, in both to allow extensions 
     // to register before this call in a ModInitializer (declared in fabric.mod.json)
-    public CarpetServer()
+    public void onGameStarted(FMLLoadCompleteEvent event)
     {
         settingsManager = new carpet.settings.SettingsManager(CarpetSettings.carpetVersion, "carpet", "Carpet Mod");
         settingsManager.parseSettingsClass(CarpetSettings.class);
