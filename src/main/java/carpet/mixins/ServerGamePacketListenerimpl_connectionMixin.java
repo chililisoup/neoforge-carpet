@@ -16,19 +16,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ServerGamePacketListenerImpl.class)
 public class ServerGamePacketListenerimpl_connectionMixin
 {
-    @Shadow
-    public ServerPlayer player;
-
-    @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
-    private void onCustomCarpetPayload(ServerboundCustomPayloadPacket serverboundCustomPayloadPacket, CallbackInfo ci)
-    {
-        if (serverboundCustomPayloadPacket.payload() instanceof CarpetClient.CarpetPayload cpp) {
-            // We should force onto the main thread here
-            // ServerNetworkHandler.handleData can possibly mutate data that isn't
-            // thread safe, and also allows for client commands to be executed
-            PacketUtils.ensureRunningOnSameThread(serverboundCustomPayloadPacket, (ServerGamePacketListener) this, player.serverLevel());
-            ServerNetworkHandler.onClientData(player, cpp.data());
-            ci.cancel();
-        }
-    }
+//    @Shadow
+//    public ServerPlayer player;
+//
+//    @Inject(method = "handleCustomPayload", at = @At("HEAD"), cancellable = true)
+//    private void onCustomCarpetPayload(ServerboundCustomPayloadPacket serverboundCustomPayloadPacket, CallbackInfo ci)
+//    {
+//        if (serverboundCustomPayloadPacket.payload() instanceof CarpetClient.CarpetPayload cpp) {
+//            // We should force onto the main thread here
+//            // ServerNetworkHandler.handleData can possibly mutate data that isn't
+//            // thread safe, and also allows for client commands to be executed
+//            PacketUtils.ensureRunningOnSameThread(serverboundCustomPayloadPacket, (ServerGamePacketListener) this, player.serverLevel());
+//            ServerNetworkHandler.onClientData(player, cpp.data());
+//            ci.cancel();
+//        }
+//    }
 }

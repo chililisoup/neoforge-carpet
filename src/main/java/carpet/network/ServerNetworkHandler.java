@@ -24,6 +24,9 @@ import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class ServerNetworkHandler
 {
@@ -39,9 +42,12 @@ public class ServerNetworkHandler
     {
         if (!((ServerGamePacketListenerImplInterface) playerEntity.connection).getConnection().isMemoryConnection())
         {
-            CompoundTag data = new CompoundTag();
-            data.putString(CarpetClient.HI, CarpetSettings.carpetVersion);
-            playerEntity.connection.send(new ClientboundCustomPayloadPacket(new CarpetClient.CarpetPayload(data)));
+            if (playerEntity.connection.hasChannel(CarpetClient.CARPET_CHANNEL))
+            {
+                CompoundTag data = new CompoundTag();
+                data.putString(CarpetClient.HI, CarpetSettings.carpetVersion);
+                PacketDistributor.sendToPlayer(playerEntity, new CarpetClient.CarpetPayload(data));
+            }
         }
         else
         {
@@ -63,7 +69,7 @@ public class ServerNetworkHandler
         }
         DataBuilder data = DataBuilder.create(playerEntity.server); // tickrate related settings are sent on world change
         CarpetServer.forEachManager(sm -> sm.getCarpetRules().forEach(data::withRule));
-        playerEntity.connection.send(data.build());
+        PacketDistributor.sendToPlayer(playerEntity, data.build());
     }
 
     public static void sendPlayerLevelData(ServerPlayer player, ServerLevel level)
@@ -108,23 +114,27 @@ public class ServerNetworkHandler
         {
             result.put("output", outputResult);
         }
-        player.connection.send(DataBuilder.create(player.server).withCustomNbt("clientCommand", result).build());
+        PacketDistributor.sendToPlayer(player, DataBuilder.create(player.server).withCustomNbt("clientCommand", result).build());
         // run command plug to command output,
     }
 
-    public static void onClientData(ServerPlayer player, CompoundTag compound)
+    public static void onClientData(final CarpetClient.CarpetPayload payload, final IPayloadContext context)
     {
-        for (String key : compound.getAllKeys())
-        {
-            if (dataHandlers.containsKey(key))
+        context.enqueueWork(() -> {
+            CompoundTag compound = payload.data();
+            ServerPlayer player = (ServerPlayer) context.player();
+            for (String key : compound.getAllKeys())
             {
-                dataHandlers.get(key).accept(player, compound.get(key));
+                if (dataHandlers.containsKey(key))
+                {
+                    dataHandlers.get(key).accept(player, compound.get(key));
+                }
+                else
+                {
+                    CarpetSettings.LOG.warn("Unknown carpet client data: " + key);
+                }
             }
-            else
-            {
-                CarpetSettings.LOG.warn("Unknown carpet client data: " + key);
-            }
-        }
+        });
     }
 
     public static void updateRuleWithConnectedClients(CarpetRule<?> rule)
@@ -135,7 +145,7 @@ public class ServerNetworkHandler
         }
         for (ServerPlayer player : remoteCarpetPlayers.keySet())
         {
-            player.connection.send(DataBuilder.create(player.server).withRule(rule).build());
+            PacketDistributor.sendToPlayer(player, DataBuilder.create(player.server).withRule(rule).build());
         }
     }
 
@@ -147,7 +157,7 @@ public class ServerNetworkHandler
         }
         for (ServerPlayer player : validCarpetPlayers)
         {
-            player.connection.send(DataBuilder.create(player.server).withCustomNbt(command, data).build());
+            PacketDistributor.sendToPlayer(player, DataBuilder.create(player.server).withCustomNbt(command, data).build());
         }
     }
 
@@ -155,7 +165,7 @@ public class ServerNetworkHandler
     {
         if (isValidCarpetPlayer(player))
         {
-            player.connection.send(DataBuilder.create(player.server).withCustomNbt(command, data).build());
+            PacketDistributor.sendToPlayer(player, DataBuilder.create(player.server).withCustomNbt(command, data).build());
         }
     }
 
@@ -242,9 +252,9 @@ public class ServerNetworkHandler
             return this;
         }
 
-        private ClientboundCustomPayloadPacket build()
+        private CarpetClient.CarpetPayload build()
         {
-            return new ClientboundCustomPayloadPacket(new CarpetClient.CarpetPayload(tag));
+            return new CarpetClient.CarpetPayload(tag);
         }
     }
 }

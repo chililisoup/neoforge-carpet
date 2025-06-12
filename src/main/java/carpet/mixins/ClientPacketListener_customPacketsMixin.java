@@ -29,16 +29,16 @@ public abstract class ClientPacketListener_customPacketsMixin extends ClientComm
         CarpetClient.gameJoined( minecraft.player);
     }
 
-    @Inject(method = "handleUnknownCustomPayload", at = @At(
-            value = "HEAD"
-            ), cancellable = true)
-    private void onOnCustomPayload(CustomPacketPayload packet, CallbackInfo ci)
-    {
-        if (packet instanceof CarpetClient.CarpetPayload cpp)
-        {
-            ClientNetworkHandler.onServerData(cpp.data(), minecraft.player);
-            ci.cancel();
-        }
-    }
+//    @Inject(method = "handleUnknownCustomPayload", at = @At(
+//            value = "HEAD"
+//            ), cancellable = true)
+//    private void onOnCustomPayload(CustomPacketPayload packet, CallbackInfo ci)
+//    {
+//        if (packet instanceof CarpetClient.CarpetPayload cpp)
+//        {
+//            ClientNetworkHandler.onServerData(cpp.data(), minecraft.player);
+//            ci.cancel();
+//        }
+//    }
 
 }

@@ -15,6 +15,8 @@ import carpet.commands.MobAICommand;
 import carpet.commands.PerimeterInfoCommand;
 import carpet.commands.PlayerCommand;
 import carpet.commands.ProfileCommand;
+import carpet.network.CarpetClient;
+import carpet.network.ClientNetworkHandler;
 import carpet.script.ScriptCommand;
 import carpet.commands.SpawnCommand;
 import carpet.commands.TestCommand;
@@ -39,9 +41,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 @Mod("carpet")
 public class CarpetServer // static for now - easier to handle all around the code, its one anyways
@@ -73,6 +80,7 @@ public class CarpetServer // static for now - easier to handle all around the co
     public CarpetServer(IEventBus eventBus)
     {
         eventBus.addListener(this::onGameStarted);
+        eventBus.addListener(this::registerPackets);
     }
 
     // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
@@ -153,6 +161,20 @@ public class CarpetServer // static for now - easier to handle all around the co
         if (!FMLLoader.isProduction())
             TestCommand.register(dispatcher);
         // todo 1.16 - re-registerer apps if that's a reload operation.
+    }
+
+    public void registerPackets(final RegisterPayloadHandlersEvent event) {
+        // Sets the current network version
+        final PayloadRegistrar registrar = event.registrar("1").optional();
+
+        registrar.configurationToClient(
+                CarpetClient.CarpetPayload.TYPE,
+                CarpetClient.CarpetPayload.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        ClientNetworkHandler::onServerData,
+                        ServerNetworkHandler::onClientData
+                )
+        );
     }
 
     public static void onPlayerLoggedIn(ServerPlayer player)

@@ -16,6 +16,9 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class ClientNetworkHandler
 {
@@ -112,28 +115,35 @@ public class ClientNetworkHandler
         CarpetClient.getPlayer().connection.send(new ServerboundCustomPayloadPacket(
                 new CarpetClient.CarpetPayload(data)
         ));
+
+        PacketDistributor.sendToServer(new CarpetClient.CarpetPayload(data));
     }
 
-    public static void onServerData(CompoundTag compound, LocalPlayer player)
+    public static void onServerData(final CarpetClient.CarpetPayload payload, final IPayloadContext context)
     {
-        for (String key : compound.getAllKeys())
-        {
-            if (dataHandlers.containsKey(key))
+        context.enqueueWork(() -> {
+            CompoundTag compound = payload.data();
+            LocalPlayer player = (LocalPlayer) context.player();
+
+            for (String key : compound.getAllKeys())
             {
-                try
+                if (dataHandlers.containsKey(key))
                 {
-                    dataHandlers.get(key).accept(player, compound.get(key));
+                    try
+                    {
+                        dataHandlers.get(key).accept(player, compound.get(key));
+                    }
+                    catch (Exception exc)
+                    {
+                        CarpetSettings.LOG.info("Corrupt carpet data for " + key);
+                    }
                 }
-                catch (Exception exc)
+                else
                 {
-                    CarpetSettings.LOG.info("Corrupt carpet data for " + key);
+                    CarpetSettings.LOG.error("Unknown carpet data: " + key);
                 }
             }
-            else
-            {
-                CarpetSettings.LOG.error("Unknown carpet data: " + key);
-            }
-        }
+        });
     }
 
     public static void clientCommand(String command)
