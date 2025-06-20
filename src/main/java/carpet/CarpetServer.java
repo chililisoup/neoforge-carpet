@@ -41,11 +41,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -167,7 +165,7 @@ public class CarpetServer // static for now - easier to handle all around the co
         // Sets the current network version
         final PayloadRegistrar registrar = event.registrar("1").optional();
 
-        registrar.configurationToClient(
+        registrar.playBidirectional(
                 CarpetClient.CarpetPayload.TYPE,
                 CarpetClient.CarpetPayload.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(
