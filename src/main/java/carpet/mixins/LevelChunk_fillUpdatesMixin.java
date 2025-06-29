@@ -1,6 +1,8 @@
 package carpet.mixins;
 
 import carpet.CarpetSettings;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -9,18 +11,18 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(LevelChunk.class)
+@Mixin(value = LevelChunk.class)
 public class LevelChunk_fillUpdatesMixin
 {
     // todo onStateReplaced needs a bit more love since it removes be which is needed
-    @Redirect(method = "setBlockState", at = @At(
+    @WrapOperation(method = "setBlockState", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;onPlace(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V"
     ))
-    private void onAdded(BlockState blockState, Level world_1, BlockPos blockPos_1, BlockState blockState_1, boolean boolean_1)
+    private void onAdded(BlockState blockState, Level world_1, BlockPos blockPos_1, BlockState blockState_1, boolean boolean_1, Operation<Void> original)
     {
         if (!CarpetSettings.impendingFillSkipUpdates.get())
-            blockState.onPlace(world_1, blockPos_1, blockState_1, boolean_1);
+            original.call(blockState, world_1, blockPos_1, blockState_1, boolean_1);
     }
 
     @Redirect(method = "setBlockState", at = @At(
