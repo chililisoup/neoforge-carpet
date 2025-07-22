@@ -45,6 +45,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 
 @Mod("carpet")
@@ -74,8 +75,9 @@ public class CarpetServer // static for now - easier to handle all around the co
         }
     }
 
-    public CarpetServer(IEventBus eventBus)
+    public CarpetServer()
     {
+        IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         eventBus.addListener(this::onGameStarted);
     }
 
