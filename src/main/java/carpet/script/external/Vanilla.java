@@ -1,25 +1,7 @@
 package carpet.script.external;
 
 import carpet.CarpetSettings;
-import carpet.fakes.BiomeInterface;
-import carpet.fakes.BlockPredicateInterface;
-import carpet.fakes.BlockStateArgumentInterface;
-import carpet.fakes.ChunkTicketManagerInterface;
-import carpet.fakes.CommandDispatcherInterface;
-import carpet.fakes.EntityInterface;
-import carpet.fakes.IngredientInterface;
-import carpet.fakes.InventoryBearerInterface;
-import carpet.fakes.ItemEntityInterface;
-import carpet.fakes.LivingEntityInterface;
-import carpet.fakes.MinecraftServerInterface;
-import carpet.fakes.MobEntityInterface;
-import carpet.fakes.RandomStateVisitorAccessor;
-import carpet.fakes.RecipeManagerInterface;
-import carpet.fakes.AbstractContainerMenuInterface;
-import carpet.fakes.ServerPlayerInterface;
-import carpet.fakes.ServerPlayerInteractionManagerInterface;
-import carpet.fakes.ServerWorldInterface;
-import carpet.fakes.SpawnHelperInnerInterface;
+import carpet.fakes.*;
 import carpet.mixins.Objective_scarpetMixin;
 import carpet.mixins.PoiRecord_scarpetMixin;
 import carpet.mixins.Scoreboard_scarpetMixin;
@@ -80,9 +62,9 @@ import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforgespi.language.IModInfo;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -230,7 +212,7 @@ public class Vanilla
 
     public static String ServerPlayer_getLanguage(ServerPlayer player)
     {
-        return ((ServerPlayerInterface) player).getLanguage();
+        return player.getLanguage();
     }
 
     public static GoalSelector Mob_getAI(Mob mob, boolean target)
@@ -350,7 +332,7 @@ public class Vanilla
 
     public static int PoiRecord_getFreeTickets(PoiRecord record)
     {
-        return ((PoiRecord_scarpetMixin) record).getFreeTickets();
+        return record.getFreeTickets();
     }
 
     public static void PoiRecord_callAcquireTicket(PoiRecord record)

@@ -1,5 +1,6 @@
 package carpet.mixins;
 
+import carpet.fakes.BlockBehaviourInterface;
 import com.llamalad7.mixinextras.sugar.Local;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -9,8 +10,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import carpet.fakes.BlockPistonBehaviourInterface;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -46,10 +45,11 @@ public class PistonStructureResolver_customStickyMixin {
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z"
-        )
+        ),
+        remap = false
     )
     private boolean onAddBlockLineCanStickToEachOther(BlockState state, BlockState behindState) {
-        if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
+        if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(level, pos_addBlockLine, state, behindPos_addBlockLine, behindState, pushDirection.getOpposite(), pushDirection);
         }
 
@@ -78,10 +78,11 @@ public class PistonStructureResolver_customStickyMixin {
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z"
-        )
+        ),
+        remap = false
     )
     private boolean onAddBranchingBlocksCanStickToEachOther(BlockState neighborState, BlockState state, BlockPos pos) {
-        if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
+        if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(level, pos, state, neighborPos_addBranchingBlocks, neighborState, dir_addBranchingBlocks, pushDirection);
         }
 

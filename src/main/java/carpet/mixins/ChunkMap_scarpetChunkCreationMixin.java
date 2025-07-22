@@ -64,7 +64,7 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
 {
     @Shadow
     @Final
-    private ServerLevel level;
+    ServerLevel level;
 
     @Shadow
     @Final
@@ -108,12 +108,13 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
 
     //@Shadow protected abstract void postLoadProtoChunk(final ServerLevel serverLevel, final List<CompoundTag> list);
 
+    @Unique
     ThreadLocal<Boolean> generated = ThreadLocal.withInitial(() -> null);
 
     // in protoChunkToFullChunk
     // fancier version of the one below, ensuring that the event is triggered when the chunk is actually loaded.
-    @Inject(method = "method_20460", at = @At("HEAD"), remap = false)
-    private void onChunkGeneratedStart(ChunkHolder chunkHolder, Either<ChunkAccess, ChunkLoadingFailure> chunk, CallbackInfoReturnable<CompletableFuture<Either<ChunkAccess, ChunkLoadingFailure>>> cir)
+    @Inject(method = "protoChunkToFullChunk", at = @At("HEAD"), remap = false)
+    private void onChunkGeneratedStart(ChunkHolder chunkHolder, CallbackInfoReturnable<CompletableFuture<Either<ChunkAccess, ChunkLoadingFailure>>> cir)
     {
         if (CHUNK_GENERATED.isNeeded() || CHUNK_LOADED.isNeeded())
         {
@@ -125,8 +126,8 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
         }
     }
 
-    @Inject(method = "method_20460", at = @At("RETURN"), remap = false)
-    private void onChunkGeneratedEnd(ChunkHolder chunkHolder, Either<ChunkAccess, ChunkLoadingFailure> chunk, CallbackInfoReturnable<CompletableFuture<Either<ChunkAccess, ChunkLoadingFailure>>> cir)
+    @Inject(method = "protoChunkToFullChunk", at = @At("RETURN"), remap = false)
+    private void onChunkGeneratedEnd(ChunkHolder chunkHolder, CallbackInfoReturnable<CompletableFuture<Either<ChunkAccess, ChunkLoadingFailure>>> cir)
     {
         Boolean localGenerated= generated.get();
         if (localGenerated != null)

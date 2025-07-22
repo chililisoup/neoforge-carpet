@@ -4,6 +4,8 @@ import carpet.CarpetSettings;
 import carpet.fakes.BlockEntityInterface;
 import carpet.fakes.PistonBlockEntityInterface;
 import carpet.fakes.LevelInterface;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -46,8 +48,8 @@ public abstract class PistonMovingBlockEntity_movableBEMixin extends BlockEntity
         return carriedBlockEntity;
     }
 
-    @Override
-    public void setLevel(Level world) {
+    @WrapMethod(method = "setLevel")
+    public void carpet$setLevel(Level world, Operation<Void> original) {
         super.setLevel(world);
         if (carriedBlockEntity != null) carriedBlockEntity.setLevel(world);
     }

@@ -36,8 +36,8 @@ public abstract class HopperBlockEntity_counterMixin extends RandomizableContain
     /**
      * A method to remove items from hoppers pointing into wool and count them via {@link HopperCounter#add} method
      */
-    @Inject(method = "ejectItems", at = @At("HEAD"), cancellable = true)
-    private static void onInsert(Level world, BlockPos blockPos, BlockState blockState, Container inventory, CallbackInfoReturnable<Boolean> cir)
+    @Inject(method = "ejectItems", at = @At("HEAD"), cancellable = true, remap = false)
+    private static void onInsert(Level world, BlockPos blockPos, BlockState blockState, HopperBlockEntity inventory, CallbackInfoReturnable<Boolean> cir)
     {
         if (CarpetSettings.hopperCounters) {
             DyeColor woolColor = WoolTool.getWoolColorAtPosition(

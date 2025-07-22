@@ -34,3 +34,5 @@ bin/
 
 run/
 logs/
+/src/generated/
+/src/test/

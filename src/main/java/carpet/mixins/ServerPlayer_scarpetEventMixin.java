@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.util.ITeleporter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -96,15 +97,15 @@ public abstract class ServerPlayer_scarpetEventMixin extends Player implements S
     private Vec3 previousLocation;
     private ResourceKey<Level> previousDimension;
 
-    @Inject(method = "changeDimension", at = @At("HEAD"))
-    private void logPreviousCoordinates(ServerLevel serverWorld, CallbackInfoReturnable<Entity> cir)
+    @Inject(method = "changeDimension", at = @At("HEAD"), remap = false)
+    private void logPreviousCoordinates(ServerLevel serverWorld, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir)
     {
         previousLocation = position();
         previousDimension = level().dimension();  //dimension type
     }
 
-    @Inject(method = "changeDimension", at = @At("RETURN"))
-    private void atChangeDimension(ServerLevel destination, CallbackInfoReturnable<Entity> cir)
+    @Inject(method = "changeDimension", at = @At("RETURN"), remap = false)
+    private void atChangeDimension(ServerLevel destination, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir)
     {
         if (PLAYER_CHANGES_DIMENSION.isNeeded())
         {
@@ -128,21 +129,5 @@ public abstract class ServerPlayer_scarpetEventMixin extends Player implements S
     public boolean isInvalidEntityObject()
     {
         return isInvalidReference;
-    }
-
-    //getting player language
-    @Unique
-    private String language;
-
-    @Override
-    public String getLanguage()
-    {
-        return this.language;
-    }
-
-    @Inject(method = "updateOptions", at = @At("HEAD"))
-    public void setLanguage(ServerboundClientInformationPacket packet, CallbackInfo ci)
-    {
-        this.language = packet.language();
     }
 }

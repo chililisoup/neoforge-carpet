@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class Level_fillUpdatesMixin
 {
     @ModifyConstant(method = "markAndNotifyBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/chunk/LevelChunk;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;II)V", //setBlockState main
-            constant = @Constant(intValue = 16))
+            constant = @Constant(intValue = 16), remap = false)
     private int addFillUpdatesInt(int original) {
         if (CarpetSettings.impendingFillSkipUpdates.get())
             return -1;

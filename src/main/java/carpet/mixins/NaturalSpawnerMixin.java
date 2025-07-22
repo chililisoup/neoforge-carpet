@@ -3,7 +3,8 @@ package carpet.mixins;
 import carpet.CarpetSettings;
 import carpet.fakes.LevelInterface;
 import carpet.utils.SpawnReporter;
-import net.neoforged.neoforge.event.EventHooks;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraftforge.event.ForgeEventFactory;
 import org.apache.commons.lang3.tuple.Pair;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,7 +43,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 @Mixin(NaturalSpawner.class)
 public class NaturalSpawnerMixin
 {
-    @Shadow @Final private static int MAGIC_NUMBER;
+    @Shadow @Final static int MAGIC_NUMBER;
 
     @Shadow @Final private static MobCategory[] SPAWNING_CATEGORIES;
 
@@ -161,7 +162,7 @@ public class NaturalSpawnerMixin
             // we used the mob - next time we will create a new one when needed
             ((LevelInterface) world).getPrecookedMobs().remove(entity_1.getType());
 
-        if (SpawnReporter.trackingSpawns() && SpawnReporter.local_spawns != null)
+        if (SpawnReporter.track_spawns > 0L && SpawnReporter.local_spawns != null)
         {
             SpawnReporter.registerSpawn(
                     //world.method_27983(), // getDimensionType //dimension.getType(), // getDimensionType
@@ -169,22 +170,22 @@ public class NaturalSpawnerMixin
                     group, //entity_1.getType().getSpawnGroup(),
                     entity_1.blockPosition());
         }
-        if (!SpawnReporter.mockSpawns)
+        if (!SpawnReporter.mock_spawns)
             world.addFreshEntityWithPassengers(entity_1);
             //world.spawnEntity(entity_1);
     }
 
-    // NeoForge finalizeMobSpawn event hook is applied before this, so it errors against base game source code
+    // Forge finalizeMobSpawn event hook is applied before this, so it errors against base game source code
     // Check against exported mixin class, all is well
     // This is probably quite fragile though
     @Redirect(method = "spawnCategoryForPosition(Lnet/minecraft/world/entity/MobCategory;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/NaturalSpawner$SpawnPredicate;Lnet/minecraft/world/level/NaturalSpawner$AfterSpawnCallback;)V", at = @At(
             value = "INVOKE",
-            target = "Lnet/neoforged/neoforge/event/EventHooks;finalizeMobSpawn(Lnet/minecraft/world/entity/Mob;Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;)Lnet/minecraft/world/entity/SpawnGroupData;"
+            target = "Lnet/minecraftforge/event/ForgeEventFactory;onFinalizeSpawn(Lnet/minecraft/world/entity/Mob;Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/world/entity/SpawnGroupData;"
     ))
-    private static SpawnGroupData spawnEntity(Mob mobEntity, ServerLevelAccessor serverWorldAccess, DifficultyInstance difficulty, MobSpawnType spawnReason, SpawnGroupData entityData)
+    private static SpawnGroupData spawnEntity(Mob mobEntity, ServerLevelAccessor serverWorldAccess, DifficultyInstance difficulty, MobSpawnType spawnReason, SpawnGroupData entityData, CompoundTag spawnTag)
     {
-        if (!SpawnReporter.mockSpawns) // WorldAccess
-            return EventHooks.finalizeMobSpawn(mobEntity, serverWorldAccess, difficulty, spawnReason, entityData);
+        if (!SpawnReporter.mock_spawns) // WorldAccess
+            return ForgeEventFactory.onFinalizeSpawn(mobEntity, serverWorldAccess, difficulty, spawnReason, entityData, spawnTag);
         return null;
     }
 
@@ -276,7 +277,7 @@ public class NaturalSpawnerMixin
     private static void checkSpawns(ServerLevel world, LevelChunk chunk, NaturalSpawner.SpawnState info,
                                     boolean spawnAnimals, boolean spawnMonsters, boolean shouldSpawnAnimals, CallbackInfo ci)
     {
-        if (SpawnReporter.trackingSpawns())
+        if (SpawnReporter.track_spawns > 0L)
         {
             MobCategory[] var6 = SPAWNING_CATEGORIES;
             int var7 = var6.length;
@@ -291,7 +292,7 @@ public class NaturalSpawnerMixin
                     int int_3 = newCap * int_2 / MAGIC_NUMBER; //current spawning limits
                     int mobCount = info.getMobCategoryCounts().getInt(entityCategory);
 
-                    if (SpawnReporter.trackingSpawns() && !SpawnReporter.first_chunk_marker.contains(entityCategory))
+                    if (SpawnReporter.track_spawns > 0L && !SpawnReporter.first_chunk_marker.contains(entityCategory))
                     {
                         SpawnReporter.first_chunk_marker.add(entityCategory);
                         //first chunk with spawn eligibility for that category
@@ -299,12 +300,14 @@ public class NaturalSpawnerMixin
 
                         int spawnTries = SpawnReporter.spawn_tries.get(entityCategory);
 
-                        SpawnReporter.spawn_attempts.addTo(key, spawnTries);
+                        SpawnReporter.spawn_attempts.put(key,
+                                SpawnReporter.spawn_attempts.get(key) + spawnTries);
 
-                        SpawnReporter.spawn_cap_count.addTo(key, mobCount);
+                        SpawnReporter.spawn_cap_count.put(key,
+                                SpawnReporter.spawn_cap_count.get(key) + mobCount);
                     }
 
-                    if (mobCount <= int_3 || SpawnReporter.mockSpawns) //TODO this will not float with player based mobcaps
+                    if (mobCount <= int_3 || SpawnReporter.mock_spawns) //TODO this will not float with player based mobcaps
                     {
                         //place 0 to indicate there were spawn attempts for a category
                         //if (entityCategory != EntityCategory.CREATURE || world.getServer().getTicks() % 400 == 0)

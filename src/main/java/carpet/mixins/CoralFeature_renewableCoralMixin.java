@@ -16,7 +16,7 @@ import net.minecraft.world.level.levelgen.feature.CoralFeature;
 public abstract class CoralFeature_renewableCoralMixin implements CoralFeatureInterface
 {
 
-    @Shadow protected abstract boolean placeFeature(LevelAccessor var1, RandomSource var2, BlockPos var3, BlockState var4);
+    @Shadow(remap = false) protected abstract boolean placeFeature(LevelAccessor var1, RandomSource var2, BlockPos var3, BlockState var4);
 
     @Override
     public boolean growSpecific(Level worldIn, RandomSource random, BlockPos pos, BlockState blockUnder)

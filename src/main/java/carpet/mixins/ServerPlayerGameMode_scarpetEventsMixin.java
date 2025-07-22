@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -28,7 +29,7 @@ import static carpet.script.CarpetEventServer.Event.PLAYER_INTERACTS_WITH_BLOCK;
 @Mixin(ServerPlayerGameMode.class)
 public class ServerPlayerGameMode_scarpetEventsMixin implements ServerPlayerInteractionManagerInterface
 {
-    @Shadow public ServerPlayer player;
+    @Final @Shadow protected ServerPlayer player;
 
     @Shadow private boolean isDestroyingBlock;
 
@@ -36,20 +37,21 @@ public class ServerPlayerGameMode_scarpetEventsMixin implements ServerPlayerInte
 
     @Shadow private int lastSentState;
 
-    @Shadow public ServerLevel level;
+    @Shadow protected ServerLevel level;
 
     @WrapOperation(
             method = "destroyBlock", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z"
+            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z",
+            remap = false
     ))
-    private boolean onBlockBroken(ServerPlayerGameMode instance, BlockPos blockPos, BlockState blockState, boolean canHarvest, Operation<Boolean> original)
+    private boolean onBlockBroken(ServerPlayerGameMode instance, BlockPos blockPos, boolean canHarvest, Operation<Boolean> original, @Local BlockState blockState)
     {
         if(PLAYER_BREAK_BLOCK.onBlockBroken(player, blockPos, blockState)) {
             this.level.sendBlockUpdated(blockPos, blockState, blockState, 3);
             return false;
         }
-        return original.call(instance, blockPos, blockState, canHarvest);
+        return original.call(instance, blockPos, canHarvest);
     }
 
     @Inject(method = "useItemOn", at = @At(

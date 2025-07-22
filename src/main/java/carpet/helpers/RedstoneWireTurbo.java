@@ -80,10 +80,6 @@ public class RedstoneWireTurbo
      
     /* Reference to RedstoneWireBlock object, which uses this accelerator */
     private final RedStoneWireBlock wire;
-
-    /* BlockBehaviour.UPDATE_SHAPE_ORDER access transformer wasn't working so it's copied here */
-    private static final Direction[] UPDATE_SHAPE_ORDER = new Direction[]{Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.DOWN, Direction.UP};
-     
      
     /*
      * Implementation:
@@ -950,7 +946,7 @@ public class RedstoneWireTurbo
         // these updates will be added to the stack and processed after the entire network has updated
         state.updateIndirectNeighbourShapes(level, pos, Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_CLIENTS);
 
-        for (Direction dir : UPDATE_SHAPE_ORDER) {
+        for (Direction dir : Block.UPDATE_SHAPE_ORDER) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
 
