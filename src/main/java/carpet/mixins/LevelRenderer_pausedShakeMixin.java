@@ -38,8 +38,7 @@ public class LevelRenderer_pausedShakeMixin
     @ModifyVariable(method = "renderLevel", argsOnly = true, require = 0, ordinal = 0 ,at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/particle/ParticleEngine;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V",
-            shift = At.Shift.BEFORE,
-            remap = false
+            shift = At.Shift.BEFORE
     ))
     private float changeTickPhaseBack(float previous)
     {

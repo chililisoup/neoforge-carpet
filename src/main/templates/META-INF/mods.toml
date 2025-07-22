@@ -35,7 +35,7 @@ displayName="${mod_name}" #mandatory
 displayURL="${mod_homepage}" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
-logoFile="assets/carpet/icon.png" #optional
+logoFile= "../../resources/assets/carpet/icon.png" #optional
 
 # A text field displayed in the mod UI
 credits="${mod_credits}" #optional

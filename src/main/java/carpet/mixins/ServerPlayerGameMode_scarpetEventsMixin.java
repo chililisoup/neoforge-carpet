@@ -42,8 +42,7 @@ public class ServerPlayerGameMode_scarpetEventsMixin implements ServerPlayerInte
     @WrapOperation(
             method = "destroyBlock", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z",
-            remap = false
+            target = "Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z"
     ))
     private boolean onBlockBroken(ServerPlayerGameMode instance, BlockPos blockPos, boolean canHarvest, Operation<Boolean> original, @Local BlockState blockState)
     {
