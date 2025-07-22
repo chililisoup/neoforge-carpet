@@ -26,8 +26,8 @@ tasks.named('wrapper', Wrapper).configure {
 	distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
-group = mod_group_id
+version = minecraft_version+'-'+port_version+'+v'+new Date().format('yyMMdd')
+group = mod_id
 
 repositories {
 	mavenLocal()
@@ -134,7 +134,7 @@ tasks.named('processResources', ProcessResources).configure {
 			mod_id                 : mod_id,
 			mod_name               : mod_name,
 			mod_license            : mod_license,
-			mod_version            : mod_version+'+v'+new Date().format('yyMMdd'),
+			mod_version            : carpet_version+'+v'+port_version+new Date().format('yyMMdd'),
 			mod_credits            : mod_credits,
 			mod_authors            : mod_authors,
 			mod_description        : mod_description,
