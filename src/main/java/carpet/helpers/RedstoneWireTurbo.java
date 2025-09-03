@@ -881,6 +881,7 @@ public class RedstoneWireTurbo
             // position directly above the node being calculated is always
             // at index 1.
             UpdateNode center_up = upd.neighbor_nodes[1];
+            if (center_up == null) return state;
             boolean center_up_is_cube = center_up.currentState.isRedstoneConductor(worldIn, center_up.self);  //isSimpleFUllBLock
  
             for (int m=0; m<4; m++) {

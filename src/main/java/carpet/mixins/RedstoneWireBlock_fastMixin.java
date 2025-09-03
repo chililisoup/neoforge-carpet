@@ -4,12 +4,14 @@ import carpet.CarpetSettings;
 import carpet.fakes.RedstoneWireBlockInterface;
 import carpet.helpers.RedstoneWireTurbo;
 import com.google.common.collect.Sets;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
@@ -25,9 +27,6 @@ import static net.minecraft.world.level.block.RedStoneWireBlock.POWER;
 
 @Mixin(RedStoneWireBlock.class)
 public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockInterface {
-
-    @Shadow
-    private void updatePowerStrength(Level world_1, BlockPos blockPos_1, BlockState blockState_1) { }
 
     @Shadow
     private int calculateTargetStrength(Level world, BlockPos pos) { return 0; }
@@ -52,13 +51,11 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
 
     // =
 
-    public void fastUpdate(Level world, BlockPos pos, BlockState state, BlockPos source) {
+    public boolean fastUpdate(Level world, BlockPos pos, BlockState state, BlockPos source) {
         // [CM] fastRedstoneDust -- update based on carpet rule
-        if (CarpetSettings.fastRedstoneDust) {
-            wireTurbo.updateSurroundingRedstone(world, pos, state, source);
-            return;
-        }
-        updatePowerStrength(world, pos, state);
+        if (!CarpetSettings.fastRedstoneDust) return false;
+        wireTurbo.updateSurroundingRedstone(world, pos, state, source);
+        return true;
     }
 
     /**
@@ -107,28 +104,28 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
     // =
 
 
-    @Redirect(method = "onPlace", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
-    private void redirectOnBlockAddedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1) {
-        fastUpdate(world_1, blockPos_1, blockState_1, null);
+    @WrapOperation(method = "onPlace", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    private void redirectOnBlockAddedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Operation<Void> original) {
+        if (!fastUpdate(world_1, blockPos_1, blockState_1, null))
+            original.call(self, world_1, blockPos_1, blockState_1);
     }
 
-    @Redirect(method = "onRemove", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
-    private void redirectOnStateReplacedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1) {
-        fastUpdate(world_1, blockPos_1, blockState_1, null);
+    @WrapOperation(method = "onRemove", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    private void redirectOnStateReplacedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Operation<Void> original) {
+        if (!fastUpdate(world_1, blockPos_1, blockState_1, null))
+            original.call(self, world_1, blockPos_1, blockState_1);
     }
 
-    @Redirect(method = "neighborChanged", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    @WrapOperation(method = "neighborChanged", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
     private void redirectNeighborUpdateUpdate(
             RedStoneWireBlock self,
             Level world_1,
             BlockPos blockPos_1,
             BlockState blockState_1,
-            BlockState blockState_2,
-            Level world_2,
-            BlockPos blockPos_2,
-            Block block_1,
-            BlockPos blockPos_3,
-            boolean boolean_1) {
-        fastUpdate(world_1, blockPos_1, blockState_1, blockPos_3);
+            Operation<Void> original,
+            @Local(argsOnly = true, ordinal = 1) BlockPos blockPos_3
+    ) {
+        if (!fastUpdate(world_1, blockPos_1, blockState_1, blockPos_3))
+            original.call(self, world_1, blockPos_1, blockState_1);
     }
 }
