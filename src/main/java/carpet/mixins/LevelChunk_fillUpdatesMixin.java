@@ -9,7 +9,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(value = LevelChunk.class)
 public class LevelChunk_fillUpdatesMixin
@@ -25,11 +24,11 @@ public class LevelChunk_fillUpdatesMixin
             original.call(blockState, world_1, blockPos_1, blockState_1, boolean_1);
     }
 
-    @Redirect(method = "setBlockState", at = @At(
+    @WrapOperation(method = "setBlockState", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;onRemove(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)V"
     ))
-    private void onRemovedBlock(BlockState blockState, Level world, BlockPos pos, BlockState state, boolean moved)
+    private void onRemovedBlock(BlockState blockState, Level world, BlockPos pos, BlockState state, boolean moved, Operation<Void> original)
     {
         if (CarpetSettings.impendingFillSkipUpdates.get()) // doing due dilligence from AbstractBlock onStateReplaced
         {
@@ -40,7 +39,7 @@ public class LevelChunk_fillUpdatesMixin
         }
         else
         {
-            blockState.onRemove(world, pos, state, moved);
+            original.call(blockState, world, pos, state, moved);
         }
     }
 }
