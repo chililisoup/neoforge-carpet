@@ -1,5 +1,7 @@
 package carpet.mixins;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -7,7 +9,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import carpet.fakes.BlockPistonBehaviourInterface;
@@ -41,7 +42,7 @@ public class PistonStructureResolver_customStickyMixin {
         behindPos_addBlockLine = behindPos;
     }
 
-    @Redirect(
+    @WrapOperation(
         method = "addBlockLine",
         at = @At(
             value = "INVOKE",
@@ -49,15 +50,15 @@ public class PistonStructureResolver_customStickyMixin {
             ordinal = 0
         )
     )
-    private boolean onAddBlockLineCanStickToEachOther(BlockState state, BlockState behindState) {
+    private boolean onAddBlockLineCanStickToEachOther(BlockState state, BlockState behindState, Operation<Boolean> original) {
         if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(level, pos_addBlockLine, state, behindPos_addBlockLine, behindState, pushDirection.getOpposite(), pushDirection);
         }
 
-        return state.canStickTo(behindState);
+        return original.call(state, behindState);
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "addBlockLine",
             at = @At(
                 value = "INVOKE",
@@ -65,7 +66,7 @@ public class PistonStructureResolver_customStickyMixin {
                 ordinal = 1
             )
     )
-    private boolean removeSecondBlockLineCheck(BlockState state, BlockState behindState) {
+    private boolean removeSecondBlockLineCheck(BlockState state, BlockState behindState, Operation<Boolean> original) {
         return true;
     }
 
@@ -86,7 +87,7 @@ public class PistonStructureResolver_customStickyMixin {
         neighborPos_addBranchingBlocks = neighborPos;
     }
 
-    @Redirect(
+    @WrapOperation(
         method = "addBranchingBlocks",
         at = @At(
             value = "INVOKE",
@@ -94,15 +95,15 @@ public class PistonStructureResolver_customStickyMixin {
             ordinal = 0
         )
     )
-    private boolean onAddBranchingBlocksCanStickToEachOther(BlockState neighborState, BlockState state, BlockPos pos) {
+    private boolean onAddBranchingBlocksCanStickToEachOther(BlockState neighborState, BlockState state, Operation<Boolean> original, @Local(argsOnly = true) BlockPos pos) {
         if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(level, pos, state, neighborPos_addBranchingBlocks, neighborState, dir_addBranchingBlocks, pushDirection);
         }
 
-        return neighborState.canStickTo(state);
+        return original.call(neighborState, state);
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "addBranchingBlocks",
             at = @At(
                     value = "INVOKE",
@@ -110,7 +111,7 @@ public class PistonStructureResolver_customStickyMixin {
                     ordinal = 1
             )
     )
-    private boolean removeSecondBranchingBlockCheck(BlockState neighborState, BlockState state, BlockPos pos) {
+    private boolean removeSecondBranchingBlockCheck(BlockState neighborState, BlockState state, Operation<Boolean> original) {
         return true;
     }
 }
