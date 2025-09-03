@@ -35,7 +35,7 @@ public class PistonStructureResolver_customStickyMixin {
             Operation<Boolean> original,
             @Local(ordinal = 1) BlockPos behindPos
     ) {
-        if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
+        if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(
                     level,
                     behindPos.relative(pushDirection),
@@ -78,7 +78,7 @@ public class PistonStructureResolver_customStickyMixin {
             @Local(ordinal = 1) BlockPos neighborPos,
             @Local Direction direction
     ) {
-        if (state.getBlock() instanceof BlockPistonBehaviourInterface behaviourInterface) {
+        if (state.getBlock() instanceof BlockBehaviourInterface behaviourInterface) {
             return behaviourInterface.isStickyToNeighbor(level, pos, state, neighborPos, neighborState, direction, pushDirection);
         }
 
