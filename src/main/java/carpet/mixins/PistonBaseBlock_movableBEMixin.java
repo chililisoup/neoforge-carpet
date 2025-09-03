@@ -3,6 +3,8 @@ package carpet.mixins;
 import carpet.CarpetSettings;
 import carpet.fakes.PistonBlockEntityInterface;
 import com.google.common.collect.Lists;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -19,7 +21,6 @@ import net.minecraft.world.level.material.PushReaction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
@@ -56,10 +57,10 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
                        block != Blocks.SPAWNER;
     }
     
-    @Redirect(method = "isPushable", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;hasBlockEntity()Z"))
-    private static boolean ifHasBlockEntity(BlockState blockState)
+    @WrapOperation(method = "isPushable", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;hasBlockEntity()Z"))
+    private static boolean ifHasBlockEntity(BlockState blockState, Operation<Boolean> original)
     {
-        if (!blockState.hasBlockEntity())
+        if (!original.call(blockState))
         {
             return false;
         }
@@ -69,14 +70,14 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
         }
     }
 
-    @Redirect(method = "isPushable", at = @At(
+    @WrapOperation(method = "isPushable", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;getPistonPushReaction()Lnet/minecraft/world/level/material/PushReaction;"
     ))
-    private static PushReaction moveGrindstones(BlockState blockState)
+    private static PushReaction moveGrindstones(BlockState blockState, Operation<PushReaction> original)
     {
         if (CarpetSettings.movableBlockEntities && blockState.getBlock() == Blocks.GRINDSTONE) return PushReaction.NORMAL;
-        return blockState.getPistonPushReaction();
+        return original.call(blockState);
     }
 
     @Inject(method = "moveBlocks", at = @At(value = "INVOKE", shift = At.Shift.BEFORE,
@@ -122,18 +123,20 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
         //world_1.setBlockEntity(blockPos_4, blockEntityPiston);
     }
     
-    @Redirect(method = "moveBlocks", at = @At(value = "INVOKE",
+    @WrapOperation(method = "moveBlocks", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/Level;setBlockEntity(Lnet/minecraft/world/level/block/entity/BlockEntity;)V",
             ordinal = 0))
-    private void dontDoAnything(Level world, BlockEntity blockEntity)
+    private void dontDoAnything(Level level, BlockEntity blockEntity, Operation<Void> original)
     {
+        if (!CarpetSettings.movableBlockEntities) original.call(level, blockEntity);
     }
     
-    @Redirect(method = "moveBlocks", at = @At(value = "INVOKE",
+    @WrapOperation(method = "moveBlocks", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/piston/MovingPistonBlock;newMovingBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;ZZ)Lnet/minecraft/world/level/block/entity/BlockEntity;",
             ordinal = 0))
-    private BlockEntity returnNull(BlockPos blockPos, BlockState blockState, BlockState blockState2, Direction direction, boolean bl, boolean bl2)
+    private BlockEntity returnNull(BlockPos blockPos, BlockState blockState, BlockState blockState2, Direction direction, boolean bl, boolean bl2, Operation<BlockEntity> original)
     {
-        return null;
+        if (CarpetSettings.movableBlockEntities) return null;
+        else return original.call(blockPos, blockState, blockState2, direction, bl, bl2);
     }
 }
