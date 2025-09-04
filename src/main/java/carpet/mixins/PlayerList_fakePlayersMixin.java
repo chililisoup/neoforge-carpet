@@ -41,7 +41,7 @@ public abstract class PlayerList_fakePlayersMixin
     {
         if (playerIn instanceof EntityPlayerMPFake fake)
         {
-            return new NetHandlerPlayServerFake(this.server, clientConnection, fake, cookie);
+            return new NetHandlerPlayServerFake(this.server, fake, cookie);
         }
         else
         {
@@ -53,7 +53,7 @@ public abstract class PlayerList_fakePlayersMixin
     public ServerPlayer makePlayerForRespawn(MinecraftServer minecraftServer, ServerLevel serverLevel, GameProfile gameProfile, ClientInformation cli, ServerPlayer serverPlayer, boolean i)
     {
         if (serverPlayer instanceof EntityPlayerMPFake) {
-            return EntityPlayerMPFake.respawnFake(minecraftServer, serverLevel, gameProfile, cli);
+            return EntityPlayerMPFake.respawnFake(serverLevel, gameProfile, cli);
         }
         return new ServerPlayer(minecraftServer, serverLevel, gameProfile, cli);
     }

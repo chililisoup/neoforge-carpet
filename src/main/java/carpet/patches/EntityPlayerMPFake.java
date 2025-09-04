@@ -7,7 +7,6 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
@@ -74,9 +73,9 @@ public class EntityPlayerMPFake extends ServerPlayer
             {
                 current = p.get();
             }
-            EntityPlayerMPFake instance = new EntityPlayerMPFake(server, worldIn, current, ClientInformation.createDefault(), false);
+            EntityPlayerMPFake instance = new EntityPlayerMPFake(worldIn, current, ClientInformation.createDefault(), false);
             instance.fixStartingPosition = () -> instance.moveTo(pos.x, pos.y, pos.z, (float) yaw, (float) pitch);
-            server.getPlayerList().placeNewPlayer(new FakeClientConnection(PacketFlow.SERVERBOUND), instance, new CommonListenerCookie(current, 0, instance.clientInformation(), false));
+            server.getPlayerList().placeNewPlayer(NetHandlerPlayServerFake.DUMMY_CONNECTION, instance, new CommonListenerCookie(current, 0, instance.clientInformation(), false));
             instance.teleportTo(worldIn, pos.x, pos.y, pos.z, (float) yaw, (float) pitch);
             instance.setHealth(20.0F);
             instance.unsetRemoved();
@@ -101,9 +100,9 @@ public class EntityPlayerMPFake extends ServerPlayer
         player.connection.disconnect(Component.translatable("multiplayer.disconnect.duplicate_login"));
         ServerLevel worldIn = player.serverLevel();//.getWorld(player.dimension);
         GameProfile gameprofile = player.getGameProfile();
-        EntityPlayerMPFake playerShadow = new EntityPlayerMPFake(server, worldIn, gameprofile, player.clientInformation(), true);
+        EntityPlayerMPFake playerShadow = new EntityPlayerMPFake(worldIn, gameprofile, player.clientInformation(), true);
         playerShadow.setChatSession(player.getChatSession());
-        server.getPlayerList().placeNewPlayer(new FakeClientConnection(PacketFlow.SERVERBOUND), playerShadow, new CommonListenerCookie(gameprofile, 0, player.clientInformation(), true));
+        server.getPlayerList().placeNewPlayer(NetHandlerPlayServerFake.DUMMY_CONNECTION, playerShadow, new CommonListenerCookie(gameprofile, 0, player.clientInformation(), true));
 
         playerShadow.setHealth(player.getHealth());
         playerShadow.connection.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
@@ -121,14 +120,14 @@ public class EntityPlayerMPFake extends ServerPlayer
         return playerShadow;
     }
 
-    public static EntityPlayerMPFake respawnFake(MinecraftServer server, ServerLevel level, GameProfile profile, ClientInformation cli)
+    public static EntityPlayerMPFake respawnFake(ServerLevel level, GameProfile profile, ClientInformation cli)
     {
-        return new EntityPlayerMPFake(server, level, profile, cli, false);
+        return new EntityPlayerMPFake(level, profile, cli, false);
     }
 
-    private EntityPlayerMPFake(MinecraftServer server, ServerLevel worldIn, GameProfile profile, ClientInformation cli, boolean shadow)
+    private EntityPlayerMPFake(ServerLevel worldIn, GameProfile profile, ClientInformation cli, boolean shadow)
     {
-        super(server, worldIn, profile, cli);
+        super(worldIn.getServer(), worldIn, profile, cli);
         isAShadow = shadow;
     }
 

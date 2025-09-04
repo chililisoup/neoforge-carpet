@@ -19,9 +19,9 @@ public class NetHandlerPlayServerFake extends ServerGamePacketListenerImpl
 {
     public static final Connection DUMMY_CONNECTION;
 
-    public NetHandlerPlayServerFake(final MinecraftServer minecraftServer, final Connection connection, final ServerPlayer serverPlayer, final CommonListenerCookie i)
+    public NetHandlerPlayServerFake(final MinecraftServer minecraftServer, final ServerPlayer serverPlayer, final CommonListenerCookie i)
     {
-        super(minecraftServer, connection, serverPlayer, i);
+        super(minecraftServer, DUMMY_CONNECTION, serverPlayer, i);
     }
 
     @Override
