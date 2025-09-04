@@ -1,23 +1,33 @@
 package carpet.patches;
 
 import net.minecraft.network.Connection;
+import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.RelativeMovement;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Set;
 
 public class NetHandlerPlayServerFake extends ServerGamePacketListenerImpl
 {
-    public NetHandlerPlayServerFake(MinecraftServer server, Connection cc, EntityPlayerMPFake playerIn)
+    public static final Connection DUMMY_CONNECTION;
+
+    public NetHandlerPlayServerFake(MinecraftServer server, EntityPlayerMPFake playerIn)
     {
-        super(server, cc, playerIn);
+        super(server, DUMMY_CONNECTION, playerIn);
     }
 
     @Override
     public void send(final Packet<?> packetIn)
+    {
+    }
+
+    public void send(Packet<?> packet, @Nullable PacketSendListener sendListener)
     {
     }
 
@@ -40,6 +50,9 @@ public class NetHandlerPlayServerFake extends ServerGamePacketListenerImpl
         }
     }
 
+    static {
+        DUMMY_CONNECTION = new FakeClientConnection(PacketFlow.SERVERBOUND);
+    }
 }
 
 

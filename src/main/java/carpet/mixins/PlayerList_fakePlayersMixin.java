@@ -39,7 +39,7 @@ public abstract class PlayerList_fakePlayersMixin
     {
         if (playerIn instanceof EntityPlayerMPFake fake)
         {
-            return new NetHandlerPlayServerFake(this.server, clientConnection, fake);
+            return new NetHandlerPlayServerFake(this.server, fake);
         }
         else
         {
