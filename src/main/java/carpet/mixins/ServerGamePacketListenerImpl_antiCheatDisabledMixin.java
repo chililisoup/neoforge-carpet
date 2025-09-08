@@ -1,6 +1,8 @@
 package carpet.mixins;
 
 import carpet.CarpetSettings;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.network.Connection;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,7 +13,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ServerGamePacketListenerImpl.class)
@@ -39,21 +40,21 @@ public abstract class ServerGamePacketListenerImpl_antiCheatDisabledMixin extend
 
     }
 
-    @Redirect(method = "handleMoveVehicle", at = @At(
+    @WrapOperation(method = "handleMoveVehicle", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;isSingleplayerOwner()Z"
     ))
-    private boolean isServerTrusting(ServerGamePacketListenerImpl serverPlayNetworkHandler)
+    private boolean isServerTrusting(ServerGamePacketListenerImpl instance, Operation<Boolean> original)
     {
-        return isSingleplayerOwner() || CarpetSettings.antiCheatDisabled;
+        return original.call(instance) || CarpetSettings.antiCheatDisabled;
     }
 
-    @Redirect(method = "handleMovePlayer", require = 0, // don't crash with immersive portals,
+    @WrapOperation(method = "handleMovePlayer", require = 0, // don't crash with immersive portals,
              at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/server/level/ServerPlayer;isChangingDimension()Z"))
-    private boolean relaxMoveRestrictions(ServerPlayer serverPlayerEntity)
+    private boolean relaxMoveRestrictions(ServerPlayer serverPlayerEntity, Operation<Boolean> original)
     {
-        return CarpetSettings.antiCheatDisabled || serverPlayerEntity.isChangingDimension();
+        return CarpetSettings.antiCheatDisabled || original.call(serverPlayerEntity);
     }
 }
