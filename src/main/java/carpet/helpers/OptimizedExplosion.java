@@ -4,7 +4,6 @@ package carpet.helpers;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.Util;
@@ -73,10 +72,10 @@ public class OptimizedExplosion
         ExplosionAccessor eAccess = (ExplosionAccessor) e;
         
         entityList.clear();
-        boolean eventNeeded = EXPLOSION_OUTCOME.isNeeded() && !eAccess.getLevel().isClientSide();
+        boolean eventNeeded = EXPLOSION_OUTCOME.isNeeded() && !eAccess.carpet$getLevel().isClientSide();
         blastCalc(e);
 
-        if (!CarpetSettings.explosionNoBlockDamage && eAccess.getDamageSource() != null) {
+        if (!CarpetSettings.explosionNoBlockDamage && eAccess.carpet$getDamageSource() != null) {
             rayCalcDone = false;
             firstRay = true;
             getAffectedPositionsOnPlaneY(e,  0,  0, 15,  0, 15); // bottom
@@ -92,25 +91,25 @@ public class OptimizedExplosion
             affectedBlockPositionsSet.clear();
         }
 
-        float f3 = eAccess.getRadius() * 2.0F;
-        int k1 = Mth.floor(eAccess.getX() - (double) f3 - 1.0D);
-        int l1 = Mth.floor(eAccess.getX() + (double) f3 + 1.0D);
-        int i2 = Mth.floor(eAccess.getY() - (double) f3 - 1.0D);
-        int i1 = Mth.floor(eAccess.getY() + (double) f3 + 1.0D);
-        int j2 = Mth.floor(eAccess.getZ() - (double) f3 - 1.0D);
-        int j1 = Mth.floor(eAccess.getZ() + (double) f3 + 1.0D);
-        Vec3 vec3d = new Vec3(eAccess.getX(), eAccess.getY(), eAccess.getZ());
+        float f3 = eAccess.carpet$getRadius() * 2.0F;
+        int k1 = Mth.floor(eAccess.carpet$getX() - (double) f3 - 1.0D);
+        int l1 = Mth.floor(eAccess.carpet$getX() + (double) f3 + 1.0D);
+        int i2 = Mth.floor(eAccess.carpet$getY() - (double) f3 - 1.0D);
+        int i1 = Mth.floor(eAccess.carpet$getY() + (double) f3 + 1.0D);
+        int j2 = Mth.floor(eAccess.carpet$getZ() - (double) f3 - 1.0D);
+        int j1 = Mth.floor(eAccess.carpet$getZ() + (double) f3 + 1.0D);
+        Vec3 vec3d = new Vec3(eAccess.carpet$getX(), eAccess.carpet$getY(), eAccess.carpet$getZ());
 
-        if (vec3dmem == null || !vec3dmem.equals(vec3d) || tickmem != eAccess.getLevel().getGameTime()) {
+        if (vec3dmem == null || !vec3dmem.equals(vec3d) || tickmem != eAccess.carpet$getLevel().getGameTime()) {
             vec3dmem = vec3d;
-            tickmem = eAccess.getLevel().getGameTime();
-            entitylist = eAccess.getLevel().getEntities(null, new AABB(k1, i2, j2, l1, i1, j1));
+            tickmem = eAccess.carpet$getLevel().getGameTime();
+            entitylist = eAccess.carpet$getLevel().getEntities(null, new AABB(k1, i2, j2, l1, i1, j1));
             explosionSound = 0;
         }
 
         explosionSound++;
 
-        Entity explodingEntity = eAccess.getSource();
+        Entity explodingEntity = eAccess.carpet$getSource();
         for (int k2 = 0; k2 < entitylist.size(); ++k2) {
             Entity entity = entitylist.get(k2);
 
@@ -133,13 +132,13 @@ public class OptimizedExplosion
             }
 
             if (!entity.ignoreExplosion(e)) {
-                double d12 = Math.sqrt(entity.distanceToSqr(eAccess.getX(), eAccess.getY(), eAccess.getZ())) / (double) f3;
+                double d12 = Math.sqrt(entity.distanceToSqr(eAccess.carpet$getX(), eAccess.carpet$getY(), eAccess.carpet$getZ())) / (double) f3;
 
                 if (d12 <= 1.0D) {
-                    double d5 = entity.getX() - eAccess.getX();
+                    double d5 = entity.getX() - eAccess.carpet$getX();
                     // Change in 1.16 snapshots to fix a bug with TNT jumping
-                    double d7 = (entity instanceof PrimedTnt ? entity.getY() : entity.getEyeY()) - eAccess.getY();
-                    double d9 = entity.getZ() - eAccess.getZ();
+                    double d7 = (entity instanceof PrimedTnt ? entity.getY() : entity.getEyeY()) - eAccess.carpet$getY();
+                    double d9 = entity.getZ() - eAccess.carpet$getZ();
                     double d13 = (double) Math.sqrt(d5 * d5 + d7 * d7 + d9 * d9);
 
                     if (d13 != 0.0D) {
@@ -165,9 +164,9 @@ public class OptimizedExplosion
                         }
 
                         double d10 = (1.0D - d12) * density;
-                        if (eAccess.getDamageSource() != null)
+                        if (eAccess.carpet$getDamageSource() != null)
                         {
-                            entity.hurt(eAccess.getDamageSource(),
+                            entity.hurt(eAccess.carpet$getDamageSource(),
                                     (float) ((int) ((d10 * d10 + d10) / 2.0D * 7.0D * (double) f3 + 1.0D)));
                         }
                         double d11 = d10;
@@ -200,17 +199,17 @@ public class OptimizedExplosion
     public static void doExplosionB(Explosion e, boolean spawnParticles)
     {
         ExplosionAccessor eAccess = (ExplosionAccessor) e; 
-        Level world = eAccess.getLevel();
-        double posX = eAccess.getX();
-        double posY = eAccess.getY();
-        double posZ = eAccess.getZ();
+        Level world = eAccess.carpet$getLevel();
+        double posX = eAccess.carpet$getX();
+        double posY = eAccess.carpet$getY();
+        double posZ = eAccess.carpet$getZ();
 
         // If it is needed, calls scarpet event
         if (EXPLOSION_OUTCOME.isNeeded() && !world.isClientSide()) {
-            EXPLOSION_OUTCOME.onExplosion((ServerLevel) world, eAccess.getSource(), e::getIndirectSourceEntity,  eAccess.getX(), eAccess.getY(), eAccess.getZ(), eAccess.getRadius(), eAccess.isFire(), e.getToBlow(), entityList, eAccess.getBlockInteraction());
+            EXPLOSION_OUTCOME.onExplosion((ServerLevel) world, eAccess.carpet$getSource(), e::getIndirectSourceEntity,  eAccess.carpet$getX(), eAccess.carpet$getY(), eAccess.carpet$getZ(), eAccess.carpet$getRadius(), eAccess.carpet$isFire(), e.getToBlow(), entityList, eAccess.carpet$getBlockInteraction());
         }
 
-        boolean damagesTerrain = eAccess.getBlockInteraction() != Explosion.BlockInteraction.KEEP;
+        boolean damagesTerrain = eAccess.carpet$getBlockInteraction() != Explosion.BlockInteraction.KEEP;
 
         // explosionSound incremented till disabling the explosion particles and sound
         if (explosionSound < 100 || explosionSound % 100 == 0)
@@ -220,7 +219,7 @@ public class OptimizedExplosion
 
             if (spawnParticles)
             {
-                if (eAccess.getRadius() >= 2.0F && damagesTerrain)
+                if (eAccess.carpet$getRadius() >= 2.0F && damagesTerrain)
                 {
                     world.addParticle(ParticleTypes.EXPLOSION_EMITTER, posX, posY, posZ, 1.0D, 0.0D, 0.0D);
                 }
@@ -249,14 +248,14 @@ public class OptimizedExplosion
                     {
                         BlockEntity blockEntity = state.hasBlockEntity() ? world.getBlockEntity(blockpos) : null;  //hasBlockEntity()
 
-                        LootParams.Builder lootBuilder = (new LootParams.Builder((ServerLevel)eAccess.getLevel()))
+                        LootParams.Builder lootBuilder = (new LootParams.Builder((ServerLevel)eAccess.carpet$getLevel()))
                                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(blockpos))
                                 .withParameter(LootContextParams.TOOL, ItemStack.EMPTY)
                                 .withOptionalParameter(LootContextParams.BLOCK_ENTITY, blockEntity)
-                                .withOptionalParameter(LootContextParams.THIS_ENTITY, eAccess.getSource());
+                                .withOptionalParameter(LootContextParams.THIS_ENTITY, eAccess.carpet$getSource());
 
-                        if (eAccess.getBlockInteraction() == Explosion.BlockInteraction.DESTROY_WITH_DECAY)
-                            lootBuilder.withParameter(LootContextParams.EXPLOSION_RADIUS, eAccess.getRadius());
+                        if (eAccess.carpet$getBlockInteraction() == Explosion.BlockInteraction.DESTROY_WITH_DECAY)
+                            lootBuilder.withParameter(LootContextParams.EXPLOSION_RADIUS, eAccess.carpet$getRadius());
 
                         state.spawnAfterBreak(serverLevel, blockpos, ItemStack.EMPTY, dropFromExplosions);
 
@@ -273,7 +272,7 @@ public class OptimizedExplosion
 
         }
 
-        if (eAccess.isFire())
+        if (eAccess.carpet$isFire())
         {
             for (BlockPos blockpos1 : e.getToBlow())
             {
@@ -281,7 +280,7 @@ public class OptimizedExplosion
                 ChunkAccess chunk = world.getChunk(blockpos1.getX() >> 4, blockpos1.getZ() >> 4);
 
                 BlockPos down = blockpos1.below(1);
-                if (eAccess.getRandom().nextInt(3) == 0 &&
+                if (eAccess.carpet$getRandom().nextInt(3) == 0 &&
                         chunk.getBlockState(blockpos1).isAir() &&
                         chunk.getBlockState(down).isSolidRender(world, down)
                         )
@@ -333,29 +332,29 @@ public class OptimizedExplosion
                         d0 = d0 / d3;
                         d1 = d1 / d3;
                         d2 = d2 / d3;
-                        float rand = eAccess.getLevel().random.nextFloat();
+                        float rand = eAccess.carpet$getLevel().random.nextFloat();
                         if (CarpetSettings.tntRandomRange >= 0) {
                             rand = (float) CarpetSettings.tntRandomRange;
                         }
-                        float f = eAccess.getRadius() * (0.7F + rand * 0.6F);
-                        double d4 = eAccess.getX();
-                        double d6 = eAccess.getY();
-                        double d8 = eAccess.getZ();
+                        float f = eAccess.carpet$getRadius() * (0.7F + rand * 0.6F);
+                        double d4 = eAccess.carpet$getX();
+                        double d6 = eAccess.carpet$getY();
+                        double d8 = eAccess.carpet$getZ();
 
                         for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
                             BlockPos blockpos = BlockPos.containing(d4, d6, d8);
-                            BlockState state = eAccess.getLevel().getBlockState(blockpos);
-                            FluidState fluidState = eAccess.getLevel().getFluidState(blockpos);
+                            BlockState state = eAccess.carpet$getLevel().getBlockState(blockpos);
+                            FluidState fluidState = eAccess.carpet$getLevel().getFluidState(blockpos);
 
                             if (!state.isAir()) {
                                 float f2 = Math.max(state.getBlock().getExplosionResistance(), fluidState.getExplosionResistance());
-                                if (eAccess.getSource() != null)
-                                    f2 = eAccess.getSource().getBlockExplosionResistance(e, eAccess.getLevel(), blockpos, state, fluidState, f2);
+                                if (eAccess.carpet$getSource() != null)
+                                    f2 = eAccess.carpet$getSource().getBlockExplosionResistance(e, eAccess.carpet$getLevel(), blockpos, state, fluidState, f2);
                                 f -= (f2 + 0.3F) * 0.3F;
                             }
 
-                            if (f > 0.0F && (eAccess.getSource() == null ||
-                                    eAccess.getSource().shouldBlockExplode(e, eAccess.getLevel(), blockpos, state, f)))
+                            if (f > 0.0F && (eAccess.carpet$getSource() == null ||
+                                    eAccess.carpet$getSource().shouldBlockExplode(e, eAccess.carpet$getLevel(), blockpos, state, f)))
                             {
                                 affectedBlockPositionsSet.add(blockpos);
                             }
@@ -451,12 +450,12 @@ public class OptimizedExplosion
         double xInc = (xRel / len) * 0.3;
         double yInc = (yRel / len) * 0.3;
         double zInc = (zRel / len) * 0.3;
-        float rand = eAccess.getLevel().random.nextFloat();
+        float rand = eAccess.carpet$getLevel().random.nextFloat();
         float sizeRand = (CarpetSettings.tntRandomRange >= 0 ? (float) CarpetSettings.tntRandomRange : rand);
-        float size = eAccess.getRadius() * (0.7F + sizeRand * 0.6F);
-        double posX = eAccess.getX();
-        double posY = eAccess.getY();
-        double posZ = eAccess.getZ();
+        float size = eAccess.carpet$getRadius() * (0.7F + sizeRand * 0.6F);
+        double posX = eAccess.carpet$getX();
+        double posY = eAccess.carpet$getY();
+        double posZ = eAccess.carpet$getZ();
 
         for (float f1 = 0.3F; size > 0.0F; size -= 0.22500001F)
         {
@@ -470,9 +469,9 @@ public class OptimizedExplosion
             if (state == null)
             {
                 posImmutable = posMutable.immutable();
-                state = eAccess.getLevel().getBlockState(posImmutable);
+                state = eAccess.carpet$getLevel().getBlockState(posImmutable);
                 stateCache.put(posImmutable, state);
-                fluid = eAccess.getLevel().getFluidState(posImmutable);
+                fluid = eAccess.carpet$getLevel().getFluidState(posImmutable);
                 fluidCache.put(posImmutable, fluid);
             }
 
@@ -480,9 +479,9 @@ public class OptimizedExplosion
             {
                 float resistance = Math.max(state.getBlock().getExplosionResistance(), fluid.getExplosionResistance());
 
-                if (eAccess.getSource() != null)
+                if (eAccess.carpet$getSource() != null)
                 {
-                    resistance = eAccess.getSource().getBlockExplosionResistance(e, eAccess.getLevel(), posMutable, state, fluid, resistance);
+                    resistance = eAccess.carpet$getSource().getBlockExplosionResistance(e, eAccess.carpet$getLevel(), posMutable, state, fluid, resistance);
                 }
 
                 size -= (resistance + 0.3F) * 0.3F;
@@ -490,7 +489,7 @@ public class OptimizedExplosion
 
             if (size > 0.0F)
             {
-                if ((eAccess.getSource() == null || eAccess.getSource().shouldBlockExplode(e, eAccess.getLevel(), posMutable, state, size)))
+                if ((eAccess.carpet$getSource() == null || eAccess.carpet$getSource().shouldBlockExplode(e, eAccess.carpet$getLevel(), posMutable, state, size)))
                     affectedBlockPositionsSet.add(posImmutable != null ? posImmutable : posMutable.immutable());
             }
             else if (firstRay)
@@ -515,7 +514,7 @@ public class OptimizedExplosion
 
     private static void blastCalc(Explosion e){
         ExplosionAccessor eAccess = (ExplosionAccessor) e;
-        if(blastChanceLocation == null || blastChanceLocation.distToLowCornerSqr(eAccess.getX(), eAccess.getY(), eAccess.getZ()) > 200) return;
+        if(blastChanceLocation == null || blastChanceLocation.distToLowCornerSqr(eAccess.carpet$getX(), eAccess.carpet$getY(), eAccess.carpet$getZ()) > 200) return;
         chances.clear();
         for (int j = 0; j < 16; ++j) {
             for (int k = 0; k < 16; ++k) {
@@ -528,26 +527,26 @@ public class OptimizedExplosion
                         d0 = d0 / d3;
                         d1 = d1 / d3;
                         d2 = d2 / d3;
-                        float f = eAccess.getRadius() * (0.7F + 0.6F);
-                        double d4 = eAccess.getX();
-                        double d6 = eAccess.getY();
-                        double d8 = eAccess.getZ();
+                        float f = eAccess.carpet$getRadius() * (0.7F + 0.6F);
+                        double d4 = eAccess.carpet$getX();
+                        double d6 = eAccess.carpet$getY();
+                        double d8 = eAccess.carpet$getZ();
                         boolean found = false;
 
                         for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
                             BlockPos blockpos = BlockPos.containing(d4, d6, d8);
-                            BlockState state = eAccess.getLevel().getBlockState(blockpos);
-                            FluidState fluidState = eAccess.getLevel().getFluidState(blockpos);
+                            BlockState state = eAccess.carpet$getLevel().getBlockState(blockpos);
+                            FluidState fluidState = eAccess.carpet$getLevel().getFluidState(blockpos);
 
                             if (!state.isAir()) {
                                 float f2 = Math.max(state.getBlock().getExplosionResistance(), fluidState.getExplosionResistance());
-                                if (eAccess.getSource() != null)
-                                    f2 = eAccess.getSource().getBlockExplosionResistance(e, eAccess.getLevel(), blockpos, state, fluidState, f2);
+                                if (eAccess.carpet$getSource() != null)
+                                    f2 = eAccess.carpet$getSource().getBlockExplosionResistance(e, eAccess.carpet$getLevel(), blockpos, state, fluidState, f2);
                                 f -= (f2 + 0.3F) * 0.3F;
                             }
 
-                            if (f > 0.0F && (eAccess.getSource() == null ||
-                                    eAccess.getSource().shouldBlockExplode(e, eAccess.getLevel(), blockpos, state, f))) {
+                            if (f > 0.0F && (eAccess.carpet$getSource() == null ||
+                                    eAccess.carpet$getSource().shouldBlockExplode(e, eAccess.carpet$getLevel(), blockpos, state, f))) {
                                 if(!found && blockpos.equals(blastChanceLocation)){
                                     chances.add(f);
                                     found = true;
@@ -568,7 +567,7 @@ public class OptimizedExplosion
 
     private static void showTNTblastChance(Explosion e){
         ExplosionAccessor eAccess = (ExplosionAccessor) e;
-        double randMax = 0.6F * eAccess.getRadius();
+        double randMax = 0.6F * eAccess.carpet$getRadius();
         double total = 0;
         boolean fullyBlownUp = false;
         boolean first = true;
@@ -592,7 +591,7 @@ public class OptimizedExplosion
         NumberFormat nf = NumberFormat.getNumberInstance();
         nf.setRoundingMode (RoundingMode.DOWN);
         nf.setMaximumFractionDigits(2);
-        for(Player player : eAccess.getLevel().players()){
+        for(Player player : eAccess.carpet$getLevel().players()){
             Messenger.m(player,"w Pop: ",
                     "c " + nf.format(chance) + " ",
                     "^w Chance for the block to be destroyed by the blast: " + chance,
@@ -606,13 +605,13 @@ public class OptimizedExplosion
                     "^w TNT blast rays going through the block",
                     "?" + rays,
                     "w Size: ",
-                    String.format("c %.1f ", eAccess.getRadius()),
+                    String.format("c %.1f ", eAccess.carpet$getRadius()),
                     "^w TNT blast size",
-                    "?" + eAccess.getRadius(),
+                    "?" + eAccess.carpet$getRadius(),
                     "w @: ",
-                    String.format("c [%.1f %.1f %.1f] ", eAccess.getX(), eAccess.getY(), eAccess.getZ()),
-                    "^w TNT blast location X:" + eAccess.getX() + " Y:" + eAccess.getY() + " Z:" + eAccess.getZ(),
-                    "?" + eAccess.getX() + " " + eAccess.getY() + " " + eAccess.getZ()
+                    String.format("c [%.1f %.1f %.1f] ", eAccess.carpet$getX(), eAccess.carpet$getY(), eAccess.carpet$getZ()),
+                    "^w TNT blast location X:" + eAccess.carpet$getX() + " Y:" + eAccess.carpet$getY() + " Z:" + eAccess.carpet$getZ(),
+                    "?" + eAccess.carpet$getX() + " " + eAccess.carpet$getY() + " " + eAccess.carpet$getZ()
             );
         }
     }
