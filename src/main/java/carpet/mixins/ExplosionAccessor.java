@@ -4,7 +4,6 @@ import net.minecraft.util.RandomSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-import java.util.Random;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
@@ -12,31 +11,31 @@ import net.minecraft.world.level.Level;
 @Mixin(Explosion.class)
 public interface ExplosionAccessor {
 
-    @Accessor
-    boolean isFire();
+    @Accessor("fire")
+    boolean carpet$isFire();
 
-    @Accessor
-    Explosion.BlockInteraction getBlockInteraction();
+    @Accessor("blockInteraction")
+    Explosion.BlockInteraction carpet$getBlockInteraction();
 
-    @Accessor
-    Level getLevel();
+    @Accessor("level")
+    Level carpet$getLevel();
 
-    @Accessor
-    RandomSource getRandom();
+    @Accessor("random")
+    RandomSource carpet$getRandom();
 
-    @Accessor
-    double getX();
+    @Accessor("x")
+    double carpet$getX();
 
-    @Accessor
-    double getY();
+    @Accessor("y")
+    double carpet$getY();
 
-    @Accessor
-    double getZ();
+    @Accessor("z")
+    double carpet$getZ();
 
-    @Accessor
-    float getRadius();
+    @Accessor("radius")
+    float carpet$getRadius();
 
-    @Accessor
-    Entity getSource();
+    @Accessor("source")
+    Entity carpet$getSource();
 
 }
