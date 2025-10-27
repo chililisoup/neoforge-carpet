@@ -44,6 +44,9 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -75,10 +78,14 @@ public class CarpetServer // static for now - easier to handle all around the co
         }
     }
 
-    public CarpetServer(IEventBus eventBus)
+    public CarpetServer(IEventBus modEventBus)
     {
-        eventBus.addListener(this::onGameStarted);
-        eventBus.addListener(this::registerPackets);
+        modEventBus.addListener(this::onGameStarted);
+        modEventBus.addListener(this::registerPackets);
+
+        IEventBus eventBus = NeoForge.EVENT_BUS;
+        eventBus.addListener(this::onServerLoaded);
+        eventBus.addListener(this::onServerLoadedWorlds);
     }
 
     // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
@@ -93,8 +100,9 @@ public class CarpetServer // static for now - easier to handle all around the co
         CarpetScriptServer.parseFunctionClasses();
     }
 
-    public static void onServerLoaded(MinecraftServer server)
+    public void onServerLoaded(ServerAboutToStartEvent event)
     {
+        MinecraftServer server = event.getServer();
         CarpetServer.minecraft_server = server;
         // shoudl not be needed - that bit needs refactoring, but not now.
         SpawnReporter.resetSpawnStats(server, true);
@@ -108,8 +116,9 @@ public class CarpetServer // static for now - easier to handle all around the co
         //TickSpeed.reset();
     }
 
-    public static void onServerLoadedWorlds(MinecraftServer minecraftServer)
+    public void onServerLoadedWorlds(ServerStartingEvent event)
     {
+        MinecraftServer minecraftServer = event.getServer();
         HopperCounter.resetAll(minecraftServer, true);
         extensions.forEach(e -> e.onServerLoadedWorlds(minecraftServer));
         // initialize scarpet rules after all extensions are loaded
