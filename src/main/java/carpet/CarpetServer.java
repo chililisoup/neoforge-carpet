@@ -42,6 +42,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
@@ -77,8 +80,12 @@ public class CarpetServer // static for now - easier to handle all around the co
 
     public CarpetServer()
     {
-        IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        eventBus.addListener(this::onGameStarted);
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        modEventBus.addListener(this::onGameStarted);
+
+        IEventBus eventBus = MinecraftForge.EVENT_BUS;
+        eventBus.addListener(this::onServerLoaded);
+        eventBus.addListener(this::onServerLoadedWorlds);
     }
 
     // Separate from onServerLoaded, because a server can be loaded multiple times in singleplayer
@@ -93,8 +100,9 @@ public class CarpetServer // static for now - easier to handle all around the co
         CarpetScriptServer.parseFunctionClasses();
     }
 
-    public static void onServerLoaded(MinecraftServer server)
+    public void onServerLoaded(ServerAboutToStartEvent event)
     {
+        MinecraftServer server = event.getServer();
         CarpetServer.minecraft_server = server;
         // shoudl not be needed - that bit needs refactoring, but not now.
         SpawnReporter.reset_spawn_stats(server, true);
@@ -112,8 +120,9 @@ public class CarpetServer // static for now - easier to handle all around the co
         //TickSpeed.reset();
     }
 
-    public static void onServerLoadedWorlds(MinecraftServer minecraftServer)
+    public void onServerLoadedWorlds(ServerStartingEvent event)
     {
+        MinecraftServer minecraftServer = event.getServer();
         HopperCounter.resetAll(minecraftServer, true);
         extensions.forEach(e -> e.onServerLoadedWorlds(minecraftServer));
         // initialize scarpet rules after all extensions are loaded
