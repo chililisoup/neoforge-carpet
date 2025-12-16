@@ -32,6 +32,7 @@ import net.minecraft.nbt.EndTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
@@ -63,6 +64,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
     private Tag nbtTag = null;
     private Supplier<Tag> nbtSupplier = null;
     private boolean owned = false;
+    private static TagParser<Tag> tagParser = TagParser.create(NbtOps.INSTANCE);
 
     private NBTSerializableValue()
     {
@@ -74,7 +76,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         {
             try
             {
-                return (new TagParser(new StringReader(nbtString))).readValue();
+                return tagParser.parseAsArgument( new StringReader(nbtString));
             }
             catch (CommandSyntaxException e)
             {
@@ -107,7 +109,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
     public static Value fromStack(ItemStack stack, RegistryAccess regs)
     {
         NBTSerializableValue value = new NBTSerializableValue();
-        value.nbtSupplier = () -> stack.saveOptional(regs);
+        value.nbtSupplier = () -> ItemStack.CODEC.encodeStart(regs.createSerializationContext(NbtOps.INSTANCE), stack).getOrThrow(s -> new InternalExpressionException("Failed to parse item stack data: " + s));
         return value;
     }
 
@@ -127,7 +129,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
     {
         try
         {
-            Tag tag = (new TagParser(new StringReader(nbtString))).readValue();
+            Tag tag = tagParser.parseAsArgument(new StringReader(nbtString));
             NBTSerializableValue value = new NBTSerializableValue(tag);
             value.nbtString = null;
             return value;
@@ -345,7 +347,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
     public static ItemStack parseItem(String itemString, @Nullable CompoundTag customTag, RegistryAccess regs)
     {
         if (customTag != null) {
-            return ItemStack.parseOptional(regs, customTag);
+            return ItemStack.CODEC.parse(regs.createSerializationContext(NbtOps.INSTANCE), customTag).getOrThrow(s -> new InternalExpressionException("Failed to parse item stack data: " + s));
         }
         try
         {
@@ -385,11 +387,11 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         if (t instanceof final NumericTag number)
         {
             // short and byte will never exceed float's precision, even int won't
-            return t instanceof LongTag || t instanceof IntTag ? NumericValue.of(number.getAsLong()) : NumericValue.of(number.getAsNumber());
+            return t instanceof LongTag || t instanceof IntTag ? NumericValue.of(number.longValue()) : NumericValue.of(number.asNumber().orElseThrow());
         }
-        if (t instanceof StringTag)
+        if (t instanceof StringTag stringTag)
         {
-            return StringValue.of(t.getAsString());
+            return StringValue.of(stringTag.value());
         }
         if (t instanceof EndTag)
         {
@@ -408,13 +410,13 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         if (t instanceof final CompoundTag ctag)
         {
             Map<Value, Value> pairs = new HashMap<>();
-            for (String key : ctag.getAllKeys())
+            for (String key : ctag.keySet())
             {
                 pairs.put(new StringValue(key), decodeTagDeep(ctag.get(key)));
             }
             return MapValue.wrap(pairs);
         }
-        if (t instanceof final CollectionTag<?> ltag)
+        if (t instanceof final CollectionTag ltag)
         {
             List<Value> elems = new ArrayList<>();
             for (Tag elem : ltag)
@@ -477,17 +479,17 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         {
             return !(ctag).isEmpty();
         }
-        if (tag instanceof final CollectionTag<?> ltag)
+        if (tag instanceof final CollectionTag ltag)
         {
             return !(ltag).isEmpty();
         }
         if (tag instanceof final NumericTag number)
         {
-            return number.getAsDouble() != 0.0;
+            return number.doubleValue() != 0.0;
         }
-        if (tag instanceof StringTag)
+        if (tag instanceof StringTag st)
         {
-            return !tag.getAsString().isEmpty();
+            return !st.value().isEmpty();
         }
         return true;
     }
@@ -569,7 +571,7 @@ public class NBTSerializableValue extends Value implements ContainerValueInterfa
         boolean modified = false;
         for (Tag target : targets)
         {
-            if (!(target instanceof final CollectionTag<?> targetList))
+            if (!(target instanceof final CollectionTag targetList))
             {
                 continue;
             }

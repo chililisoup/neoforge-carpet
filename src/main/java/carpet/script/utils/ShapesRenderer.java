@@ -2,17 +2,16 @@ package carpet.script.utils;
 
 import carpet.script.CarpetScriptServer;
 import carpet.script.external.Carpet;
-import carpet.script.external.VanillaClient;
 import carpet.script.utils.shapes.ShapeDirection;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+//import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
@@ -26,35 +25,34 @@ import java.util.function.BiFunction;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.model.ShulkerModel;
-import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.state.LevelRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.Material;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
-import net.minecraft.world.item.DyeColor;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
@@ -114,13 +112,13 @@ public class ShapesRenderer
         labels = new HashMap<>();
     }
 
-    public void render(Matrix4f modelViewMatrix, Camera camera, float partialTick)
+    public void render(Matrix4f modelViewMatrix, LevelRenderState cameraa, float partialTick)
     {
         Runnable token = Carpet.startProfilerSection("Scarpet client");
         // posestack is not needed anymore - left as TODO to cleanup later
         PoseStack matrices = new PoseStack();
 
-        //Camera camera = this.client.gameRenderer.getCamera();
+        Camera camera = this.client.gameRenderer.getMainCamera();
         ClientLevel iWorld = this.client.level;
         ResourceKey<Level> dimensionType = iWorld.dimension();
         if ((shapes.get(dimensionType) == null || shapes.get(dimensionType).isEmpty()) &&
@@ -129,18 +127,18 @@ public class ShapesRenderer
             return;
         }
         long currentTime = client.level.getGameTime();
-        RenderSystem.enableDepthTest();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        RenderSystem.depthFunc(515);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        ////RenderSystem.enableDepthTest();
+        //RenderSystem.setShader(CoreShaders.POSITION_COLOR);
+        ////RenderSystem.depthFunc(515);
+        ////RenderSystem.enableBlend();
+        ////RenderSystem.defaultBlendFunc();
         // too bright
         //RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ZERO);
         // meh
         //RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
 
-        RenderSystem.disableCull();
-        RenderSystem.depthMask(false);
+        ////RenderSystem.disableCull();
+        ////RenderSystem.depthMask(false);
         //RenderSystem.polygonOffset(-3f, -3f);
         //RenderSystem.enablePolygonOffset();
 
@@ -150,7 +148,7 @@ public class ShapesRenderer
         double cameraX = camera.getPosition().x;
         double cameraY = camera.getPosition().y;
         double cameraZ = camera.getPosition().z;
-        boolean entityBoxes = client.getEntityRenderDispatcher().shouldRenderHitBoxes();
+        boolean entityBoxes = client.debugEntries.isCurrentlyEnabled(DebugScreenEntries.ENTITY_HITBOXES);
 
         if (!shapes.isEmpty())
         {
@@ -160,14 +158,13 @@ public class ShapesRenderer
             Matrix4fStack matrixStack = RenderSystem.getModelViewStack();
             matrixStack.pushMatrix();
             matrixStack.mul(matrices.last().pose());
-            RenderSystem.applyModelViewMatrix();
 
             // lines
             RenderSystem.lineWidth(0.5F);
             shapes.get(dimensionType).values().forEach(s -> {
                 if ((!s.shape.debug || entityBoxes) && s.shouldRender(dimensionType))
                 {
-                    s.renderLines(matrices, tesselator, cameraX, cameraY, cameraZ, partialTick);
+                    s.renderLines(matrices, tesselator, cameraX, cameraY, cameraZ, partialTick, cameraa);
                 }
             });
             // faces
@@ -180,7 +177,6 @@ public class ShapesRenderer
             });
             RenderSystem.lineWidth(1.0F);
             matrixStack.popMatrix();
-            RenderSystem.applyModelViewMatrix();
 
         }
         if (!labels.isEmpty())
@@ -191,14 +187,14 @@ public class ShapesRenderer
             labels.get(dimensionType).values().forEach(s -> {
                 if ((!s.shape.debug || entityBoxes) && s.shouldRender(dimensionType))
                 {
-                    s.renderLines(matrices, tesselator, cameraX, cameraY, cameraZ, partialTick);
+                    s.renderLines(matrices, tesselator, cameraX, cameraY, cameraZ, partialTick, cameraa);
                 }
             });
         }
-        RenderSystem.enableCull();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        ////RenderSystem.enableCull();
+        ////RenderSystem.depthMask(true);
+        ////RenderSystem.enableBlend();
+        ////RenderSystem.defaultBlendFunc();
         token.run();
     }
 
@@ -207,7 +203,7 @@ public class ShapesRenderer
         Runnable token = Carpet.startProfilerSection("Scarpet client");
         for (int i = 0, count = tag.size(); i < count; i++)
         {
-            addShape(tag.getCompound(i));
+            addShape(tag.getCompound(i).orElseThrow());
         }
         token.run();
     }
@@ -220,7 +216,7 @@ public class ShapesRenderer
             return;
         }
         BiFunction<Minecraft, ShapeDispatcher.ExpiringShape, RenderedShape<? extends ShapeDispatcher.ExpiringShape>> shapeFactory;
-        shapeFactory = renderedShapes.get(tag.getString("shape"));
+        shapeFactory = renderedShapes.get(tag.getString("shape").orElseThrow());
         if (shapeFactory == null)
         {
             CarpetScriptServer.LOG.info("Unrecognized shape: " + tag.getString("shape"));
@@ -267,7 +263,7 @@ public class ShapesRenderer
         long expiryTick;
         double renderEpsilon;
 
-        public abstract void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick);
+        public abstract void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState);
 
         public void renderFaces(Tesselator tesselator, double cx, double cy, double cz, float partialTick)
         {
@@ -341,7 +337,7 @@ public class ShapesRenderer
 
         @Override
         public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy,
-                                double cz, float partialTick)
+                                double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0.0)
             {
@@ -384,9 +380,9 @@ public class ShapesRenderer
                 matrices.mulPose(Axis.YP.rotationDegrees(180));
             }
 
-            RenderSystem.depthMask(true);
-            RenderSystem.enableCull();
-            RenderSystem.enableDepthTest();
+            ////RenderSystem.depthMask(true);
+            ////RenderSystem.enableCull();
+            ////RenderSystem.enableDepthTest();
 
             blockPos = BlockPos.containing(v1);
             int light = 0;
@@ -418,9 +414,9 @@ public class ShapesRenderer
                     if (blockState.getBlock() instanceof LeavesBlock && !Minecraft.useFancyGraphics()) {
                         type = RenderType.solid();
                     } else {
-                        type = ItemBlockRenderTypes.getRenderType(blockState, false);
+                        type = ItemBlockRenderTypes.getRenderType(blockState);
                     }
-                    client.getBlockRenderer().getModelRenderer().renderModel(matrices.last(), immediate.getBuffer(type), blockState, bakedModel, red, green, blue, light, OverlayTexture.NO_OVERLAY);
+                    client.getBlockRenderer().getModelRenderer().renderModel(matrices.last(), immediate.getBuffer(type), bakedModel, red, green, blue, light, OverlayTexture.NO_OVERLAY);
                 }
 
                 // draw the block`s entity part
@@ -434,28 +430,28 @@ public class ShapesRenderer
                             BlockEntity.setLevel(client.level);
                             if (shape.blockEntity != null)
                             {
-                                BlockEntity.loadWithComponents(shape.blockEntity, client.level.registryAccess());
+                                try (final ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(BlockEntity.problemPath(), CarpetScriptServer.LOG)) {
+                                    BlockEntity.loadWithComponents(TagValueInput.create(reporter, client.level.registryAccess(), shape.blockEntity));
+                                }
                             }
                         }
                     }
                 }
-                if (BlockEntity instanceof ShulkerBoxBlockEntity sbBlockEntity)
+                if (BlockEntity != null)
                 {
-                    sbrender(sbBlockEntity, partialTick,
-                            matrices, immediate, light, OverlayTexture.NO_OVERLAY);
-                }
-                else
-                {
-                    if (BlockEntity != null)
-                    {
-                        BlockEntityRenderer<BlockEntity> blockEntityRenderer = client.getBlockEntityRenderDispatcher().getRenderer(BlockEntity);
-                        if (blockEntityRenderer != null)
+                        BlockEntityRenderer<BlockEntity, BlockEntityRenderState> blockEntityRenderer = client.getBlockEntityRenderDispatcher().getRenderer(BlockEntity);
+                        BlockEntityRenderState state = client.getBlockEntityRenderDispatcher().tryExtractRenderState(BlockEntity, partialTick, null);
+
+
+
+                        if (blockEntityRenderer != null && state != null)
                         {
-                            blockEntityRenderer.render(BlockEntity, partialTick,
-                                    matrices, immediate, light, OverlayTexture.NO_OVERLAY);
+                            // testme partial positions
+                            blockEntityRenderer.submit(state, matrices,client.gameRenderer.getFeatureRenderDispatcher().getSubmitNodeStorage(), levelRenderState.cameraRenderState);
+                            //blockEntityRenderer.submit(BlockEntity, partialTick,
+                            //        matrices, light, OverlayTexture.NO_OVERLAY, camera1.getPosition(), null, client.gameRenderer.getFeatureRenderDispatcher().getSubmitNodeStorage());
 
                         }
-                    }
                 }
             }
             else
@@ -463,15 +459,20 @@ public class ShapesRenderer
                 if (shape.item != null)
                 {
                     // draw the item
-                    client.getItemRenderer().renderStatic(shape.item, transformType, light,
-                            OverlayTexture.NO_OVERLAY, matrices, immediate, client.level, (int) shape.key(client.level.registryAccess()));
+
+                    final ItemStackRenderState itemState = new ItemStackRenderState();
+                    client.getItemModelResolver().updateForTopItem(itemState, shape.item, ItemDisplayContext.FIXED, client.level, null, 0);
+                    itemState.submit(matrices, client.gameRenderer.getFeatureRenderDispatcher().getSubmitNodeStorage(), light, OverlayTexture.NO_OVERLAY, EntityRenderState.NO_OUTLINE);
+
+                    //client.getItemRenderer().renderStatic(shape.item, transformType, light,
+                    //        OverlayTexture.NO_OVERLAY, matrices, immediate, client.level, (int) shape.key(client.level.registryAccess()));
                 }
             }
             matrices.popPose();
             immediate.endBatch();
-            RenderSystem.disableCull();
-            RenderSystem.disableDepthTest();
-            RenderSystem.depthMask(false);
+            ////RenderSystem.disableCull();
+            ////RenderSystem.disableDepthTest();
+            ////RenderSystem.depthMask(false);
 
         }
 
@@ -479,44 +480,6 @@ public class ShapesRenderer
         public boolean stageDeux()
         {
             return true;
-        }
-
-        // copy and modifiy a bit from net.minecraft.client.renderer.blockentity.ShulkerBoxRenderer.render
-        public void sbrender(ShulkerBoxBlockEntity shulkerBoxBlockEntity, float f, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j)
-        {
-            Direction direction = Direction.UP;
-            if (shulkerBoxBlockEntity.hasLevel())
-            {
-                BlockState blockState = shulkerBoxBlockEntity.getBlockState();
-                if (blockState.getBlock() instanceof ShulkerBoxBlock)
-                {
-                    direction = blockState.getValue(ShulkerBoxBlock.FACING);
-                }
-            }
-            DyeColor dyeColor = shulkerBoxBlockEntity.getColor();
-            Material material;
-            if (dyeColor == null)
-            {
-                material = Sheets.DEFAULT_SHULKER_TEXTURE_LOCATION;
-            }
-            else
-            {
-                material = Sheets.SHULKER_TEXTURE_LOCATION.get(dyeColor.getId());
-            }
-
-            poseStack.pushPose();
-            poseStack.translate(0.5, 0.5, 0.5);
-            poseStack.scale(0.9995F, 0.9995F, 0.9995F);
-            poseStack.mulPose(direction.getRotation());
-            poseStack.scale(1.0F, -1.0F, -1.0F);
-            poseStack.translate(0.0, -1.0, 0.0);
-            ShulkerModel<?> model = VanillaClient.ShulkerBoxRenderer_model(client.getBlockEntityRenderDispatcher().getRenderer(shulkerBoxBlockEntity));
-            ModelPart modelPart = model.getLid();
-            modelPart.setPos(0.0F, 24.0F - shulkerBoxBlockEntity.getProgress(f) * 0.5F * 16.0F, 0.0F);
-            modelPart.yRot = 270.0F * shulkerBoxBlockEntity.getProgress(f) * (float) (Math.PI / 180.0);
-            VertexConsumer vertexConsumer = material.buffer(multiBufferSource, RenderType::entityCutoutNoCull);
-            model.renderToBuffer(poseStack, vertexConsumer, i, j, 0xffffffff);
-            poseStack.popPose();
         }
     }
 
@@ -530,7 +493,7 @@ public class ShapesRenderer
         }
 
         @Override
-        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick)
+        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0.0)
             {
@@ -541,11 +504,11 @@ public class ShapesRenderer
             Font textRenderer = client.font;
             if (shape.doublesided)
             {
-                RenderSystem.disableCull();
+                //// RenderSystem.disableCull(); TODO culling
             }
             else
             {
-                RenderSystem.enableCull();
+                //// RenderSystem.enableCull();
             }
             matrices.pushPose();
             matrices.translate(v1.x - cx, v1.y - cy, v1.z - cz);
@@ -581,10 +544,12 @@ public class ShapesRenderer
                 text_x = (float) (-textRenderer.width(shape.value.getString()));
             }
             MultiBufferSource.BufferSource immediate = MultiBufferSource.immediate(new ByteBufferBuilder(RenderType.TRANSIENT_BUFFER_SIZE));
-            textRenderer.drawInBatch(shape.value, text_x, 0.0F, shape.textcolor, false, matrices.last().pose(), immediate, Font.DisplayMode.NORMAL, shape.textbck, 15728880);
+            // text doesn't appear if backgroud is set
+            ///script run draw_shape('label', 100, 'pos', [200, 100, 200], 'text', 'Hewwo World!', 'color', 0xffffffff, 'fill', 0x33333333)
+            textRenderer.drawInBatch(shape.value, text_x, 0.0F, shape.textcolor, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, shape.textbck, 15728880);
             immediate.endBatch();
             matrices.popPose();
-            RenderSystem.enableCull();
+            ////RenderSystem.enableCull();
         }
 
         @Override
@@ -617,7 +582,7 @@ public class ShapesRenderer
         }
 
         @Override
-        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick)
+        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0.0)
             {
@@ -661,7 +626,7 @@ public class ShapesRenderer
         }
 
         @Override
-        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick)
+        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState)
         {
             Vec3 v1 = shape.relativiseRender(client.level, shape.from, partialTick);
             Vec3 v2 = shape.relativiseRender(client.level, shape.to, partialTick);
@@ -673,10 +638,31 @@ public class ShapesRenderer
         }
     }
 
+    private static void drawWithShader(MeshData mesh, RenderType type) {
+        type.draw(mesh);
+        //VertexBuffer buffre = mesh.drawState().format().getImmediateDrawVertexBuffer();
+        //buffre.bind();
+        //buffre.upload(mesh);
+        //buffre.drawWithShader(RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), RenderType. RenderSystem.getShader());
+    }
+
+
     public static class RenderedPolyface extends RenderedShape<ShapeDispatcher.Polyface>
     {
+        // mode now can only be 4, 5, or 6
         private static final VertexFormat.Mode[] faceIndices = new VertexFormat.Mode[]{
                 Mode.LINES, Mode.LINE_STRIP, Mode.DEBUG_LINES, Mode.DEBUG_LINE_STRIP, Mode.TRIANGLES, Mode.TRIANGLE_STRIP, Mode.TRIANGLE_FAN, Mode.QUADS};
+
+        private static final RenderType [] renderTypes = new RenderType[] {
+                RenderType.debugLineStrip(1),
+                RenderType.debugLineStrip(1),
+                RenderType.debugLineStrip(1),
+                RenderType.debugLineStrip(1),
+                RenderType.debugTriangleFan(), // TODO wrong
+                RenderType.debugTriangleFan(), // TODO wrong
+                RenderType.debugTriangleFan(),
+                RenderType.debugQuads()
+        };
 
         public RenderedPolyface(Minecraft client, ShapeDispatcher.ExpiringShape shape)
         {
@@ -693,11 +679,11 @@ public class ShapesRenderer
 
             if (shape.doublesided)
             {
-                RenderSystem.disableCull();
+                ////RenderSystem.disableCull(); // todo culling
             }
             else
             {
-                RenderSystem.enableCull();
+                ////RenderSystem.enableCull();
             }
 
             BufferBuilder builder = tesselator.begin(faceIndices[shape.mode], DefaultVertexFormat.POSITION_COLOR);
@@ -710,10 +696,10 @@ public class ShapesRenderer
                 }
                 builder.addVertex((float) (vec.x() - cx), (float) (vec.y() - cy), (float) (vec.z() - cz)).setColor(shape.fr, shape.fg, shape.fb, shape.fa);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), renderTypes[shape.mode]);
 
-            RenderSystem.disableCull();
-            RenderSystem.depthMask(false);
+            ////RenderSystem.disableCull();
+            ////RenderSystem.depthMask(false);
             //RenderSystem.enableDepthTest();
 
 
@@ -721,7 +707,7 @@ public class ShapesRenderer
 
         @Override
         public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy,
-                                double cz, float partialTick)
+                                double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0)
             {
@@ -746,10 +732,10 @@ public class ShapesRenderer
                     builder.addVertex((float) (vec.x() - cx), (float) (vec.y() - cy), (float) (vec.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                 }
                 builder.addVertex((float) (vec0.x() - cx), (float) (vec0.y() - cy), (float) (vec0.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 if (shape.inneredges)
                 {
-                    BufferBuilder builderr = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+                    BufferBuilder builderr = tesselator.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
                     for (int i = 1; i < shape.vertexList.size() - 1; i++)
                     {
                         Vec3 vec = shape.vertexList.get(i);
@@ -757,11 +743,11 @@ public class ShapesRenderer
                         {
                             vec = shape.relativiseRender(client.level, vec, partialTick);
                         }
-
+                        builderr.addVertex((float) (vec0.x() - cx), (float) (vec0.y() - cy), (float) (vec0.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                         builderr.addVertex((float) (vec.x() - cx), (float) (vec.y() - cy), (float) (vec.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                         builderr.addVertex((float) (vec0.x() - cx), (float) (vec0.y() - cy), (float) (vec0.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                     }
-                    BufferUploader.drawWithShader(builderr.buildOrThrow());
+                    drawWithShader(builderr.buildOrThrow(), RenderType.debugLineStrip(1));
                 }
                 return;
             }
@@ -806,14 +792,15 @@ public class ShapesRenderer
                         builder.addVertex((float) (vec.x() - cx), (float) (vec.y() - cy), (float) (vec.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                     }
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 return;
             }
             if (shape.mode == 4)
             {
-                BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+                //
                 for (int i = 0; i < shape.vertexList.size(); i++)
                 {
+                    BufferBuilder builder = tesselator.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
                     Vec3 vecA = shape.vertexList.get(i);
                     if (shape.relative.get(i))
                     {
@@ -834,13 +821,15 @@ public class ShapesRenderer
                     builder.addVertex((float) (vecA.x() - cx), (float) (vecA.y() - cy), (float) (vecA.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                     builder.addVertex((float) (vecB.x() - cx), (float) (vecB.y() - cy), (float) (vecB.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
 
-                    builder.addVertex((float) (vecB.x() - cx), (float) (vecB.y() - cy), (float) (vecB.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
+                    //builder.addVertex((float) (vecB.x() - cx), (float) (vecB.y() - cy), (float) (vecB.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                     builder.addVertex((float) (vecC.x() - cx), (float) (vecC.y() - cy), (float) (vecC.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
 
-                    builder.addVertex((float) (vecC.x() - cx), (float) (vecC.y() - cy), (float) (vecC.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
+                    //builder.addVertex((float) (vecC.x() - cx), (float) (vecC.y() - cy), (float) (vecC.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
                     builder.addVertex((float) (vecA.x() - cx), (float) (vecA.y() - cy), (float) (vecA.z() - cz)).setColor(shape.r, shape.g, shape.b, shape.a);
+
+                    drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                //drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
             }
         }
     }
@@ -853,7 +842,7 @@ public class ShapesRenderer
         }
 
         @Override
-        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick)
+        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0.0)
             {
@@ -889,7 +878,7 @@ public class ShapesRenderer
         }
 
         @Override
-        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick)
+        public void renderLines(PoseStack matrices, Tesselator tesselator, double cx, double cy, double cz, float partialTick, LevelRenderState levelRenderState)
         {
             if (shape.a == 0.0)
             {
@@ -900,7 +889,7 @@ public class ShapesRenderer
             drawCylinderWireframe(tesselator,
                     (float) (vc.x - cx - dir * renderEpsilon), (float) (vc.y - cy - dir * renderEpsilon), (float) (vc.z - cz - dir * renderEpsilon),
                     (float) (shape.radius + renderEpsilon), (float) (shape.height + 2 * dir * renderEpsilon), shape.axis,
-                    shape.subdivisions, shape.radius == 0,
+                    shape.subdivisions, shape.height == 0,
                     shape.r, shape.g, shape.b, shape.a);
 
         }
@@ -926,10 +915,10 @@ public class ShapesRenderer
 
     public static void drawLine(Tesselator tesselator, float x1, float y1, float z1, float x2, float y2, float z2, float red1, float grn1, float blu1, float alpha)
     {
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder builder = tesselator.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         builder.addVertex(x1, y1, z1).setColor(red1, grn1, blu1, alpha);
         builder.addVertex(x2, y2, z2).setColor(red1, grn1, blu1, alpha);
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+        drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
     }
 
     public static void drawBoxWireGLLines(
@@ -939,7 +928,8 @@ public class ShapesRenderer
             boolean xthick, boolean ythick, boolean zthick,
             float red1, float grn1, float blu1, float alpha, float red2, float grn2, float blu2)
     {
-        BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder builder = tesselator.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        /* old lines not using strip
         if (xthick)
         {
             builder.addVertex(x1, y1, z1).setColor(red1, grn2, blu2, alpha);
@@ -982,7 +972,52 @@ public class ShapesRenderer
             builder.addVertex(x2, y2, z1).setColor(red1, grn1, blu1, alpha);
             builder.addVertex(x2, y2, z2).setColor(red1, grn1, blu1, alpha);
         }
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+         */
+
+        if (xthick)
+
+        {
+            builder.addVertex(x1, y1, z1).setColor(red1, grn2, blu2, alpha);
+            builder.addVertex(x2, y1, z1).setColor(red1, grn2, blu2, alpha);
+
+            builder.addVertex(x2, y2, z1).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x1, y2, z1).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x1, y2, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x2, y2, z2).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x2, y1, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x1, y1, z2).setColor(red1, grn1, blu1, alpha);
+        }
+        if (ythick)
+        {
+            builder.addVertex(x1, y1, z1).setColor(red2, grn1, blu2, alpha);
+            builder.addVertex(x1, y2, z1).setColor(red2, grn1, blu2, alpha);
+
+            builder.addVertex(x2, y2, z1).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x2, y1, z1).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x2, y1, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x2, y2, z2).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x1, y2, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x1, y1, z2).setColor(red1, grn1, blu1, alpha);
+        }
+        if (zthick)
+        {
+            builder.addVertex(x1, y1, z1).setColor(red2, grn2, blu1, alpha);
+            builder.addVertex(x1, y1, z2).setColor(red2, grn2, blu1, alpha);
+
+            builder.addVertex(x1, y2, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x1, y2, z1).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x2, y2, z1).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x2, y2, z2).setColor(red1, grn1, blu1, alpha);
+
+            builder.addVertex(x2, y1, z2).setColor(red1, grn1, blu1, alpha);
+            builder.addVertex(x2, y1, z1).setColor(red1, grn1, blu1, alpha);
+        }
+        drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
     }
 
     public static void drawBoxFaces(
@@ -1043,7 +1078,7 @@ public class ShapesRenderer
                 builder.addVertex(x1, y2, z2).setColor(red1, grn1, blu1, alpha);
             }
         }
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+        drawWithShader(builder.buildOrThrow(), RenderType.debugQuads());
     }
 
     public static void drawCylinderWireframe(Tesselator tesselator,
@@ -1076,7 +1111,7 @@ public class ShapesRenderer
                     float z = r * Mth.sin(theta);
                     builder.addVertex(x + cx, y + cy, z + cz).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
             }
 
             if (!isFlat)
@@ -1094,10 +1129,10 @@ public class ShapesRenderer
                     builder.addVertex(cx + x, cy + h, cz - z).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx - x, cy + h, cz + z).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx - x, cy + 0, cz + z).setColor(red, grn, blu, alpha);
-                    BufferUploader.drawWithShader(builder.buildOrThrow());
+                    drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 }
             }
-            else
+            /* else
             {
                 BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
                 for (int i = 0; i <= num_steps180; i++)
@@ -1108,8 +1143,8 @@ public class ShapesRenderer
                     builder.addVertex(cx - x, cy, cz + z).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx + x, cy, cz - z).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-            }
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
+            }*/
 
         }
         else if (axis == Direction.Axis.X)
@@ -1126,7 +1161,7 @@ public class ShapesRenderer
                     float y = r * Mth.sin(theta);
                     builder.addVertex(x + cx, y + cy, z + cz).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
             }
 
             if (!isFlat)
@@ -1143,22 +1178,22 @@ public class ShapesRenderer
                     builder.addVertex(cx + 0, cy + y, cz - z).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx + h, cy + y, cz - z).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx + h, cy - y, cz + z).setColor(red, grn, blu, alpha);
-                    BufferUploader.drawWithShader(builder.buildOrThrow());
+                    drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 }
             }
-            else
+            /*else
             {
-                BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
-                for (int i = 0; i <= num_steps180; i++)
+                BufferBuilder builder = tesselator.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+                for (int i = 0; i <= num_steps360+1; i++)
                 {
                     float theta = step * i;
                     float y = r * Mth.cos(theta);
                     float z = r * Mth.sin(theta);
-                    builder.addVertex(cx, cy - y, cz + z).setColor(red, grn, blu, alpha);
-                    builder.addVertex(cx, cy + y, cz - z).setColor(red, grn, blu, alpha);
+                    builder.addVertex(cx, cy + y, cz + z).setColor(red, grn, blu, alpha);
+                    //builder.addVertex(cx, cy + y, cz - z).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-            }
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
+            }*/
         }
         else if (axis == Direction.Axis.Z)
         {
@@ -1174,7 +1209,7 @@ public class ShapesRenderer
                     float x = r * Mth.sin(theta);
                     builder.addVertex(x + cx, y + cy, z + cz).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
             }
             if (!isFlat)
             {
@@ -1190,10 +1225,10 @@ public class ShapesRenderer
                     builder.addVertex(cx - x, cy + y, cz + 0).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx - x, cy + y, cz + h).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx + x, cy - y, cz + h).setColor(red, grn, blu, alpha);
-                    BufferUploader.drawWithShader(builder.buildOrThrow());
+                    drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
                 }
             }
-            else
+            /*else
             {
                 BufferBuilder builder = tesselator.begin(VertexFormat.Mode.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
                 for (int i = 0; i <= num_steps180; i++)
@@ -1204,9 +1239,8 @@ public class ShapesRenderer
                     builder.addVertex(cx + x, cy - y, cz).setColor(red, grn, blu, alpha);
                     builder.addVertex(cx - x, cy + y, cz).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-            }
-
+                drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
+            }*/
         }
     }
 
@@ -1231,7 +1265,7 @@ public class ShapesRenderer
                 float z = r * Mth.sin(theta);
                 builder.addVertex(x + cx, cy, z + cz).setColor(red, grn, blu, alpha);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugTriangleFan());
             if (!isFlat)
             {
                 BufferBuilder builderr = tesselator.begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
@@ -1243,7 +1277,7 @@ public class ShapesRenderer
                     float z = r * Mth.sin(theta);
                     builderr.addVertex(x + cx, cy + h, z + cz).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builderr.buildOrThrow());
+                drawWithShader(builderr.buildOrThrow(), RenderType.debugTriangleFan());
 
                 BufferBuilder builderrr = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);  // quad strip to quads
                 float xp = r * 1;
@@ -1260,7 +1294,7 @@ public class ShapesRenderer
                     xp = x;
                     zp = z;
                 }
-                BufferUploader.drawWithShader(builderrr.buildOrThrow());
+                drawWithShader(builderrr.buildOrThrow(), RenderType.debugQuads());
             }
 
         }
@@ -1275,7 +1309,7 @@ public class ShapesRenderer
                 float z = r * Mth.sin(theta);
                 builder.addVertex(cx, cy + y, z + cz).setColor(red, grn, blu, alpha);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugTriangleFan());
             if (!isFlat)
             {
                 BufferBuilder builderr = tesselator.begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
@@ -1287,7 +1321,7 @@ public class ShapesRenderer
                     float z = r * Mth.sin(theta);
                     builderr.addVertex(cx + h, cy + y, cz + z).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builderr.buildOrThrow());
+                drawWithShader(builderr.buildOrThrow(), RenderType.debugTriangleFan());
 
                 BufferBuilder builderrr = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);  // quad strip to quads
                 float yp = r * 1;
@@ -1304,7 +1338,7 @@ public class ShapesRenderer
                     yp = y;
                     zp = z;
                 }
-                BufferUploader.drawWithShader(builderrr.buildOrThrow());
+                drawWithShader(builderrr.buildOrThrow(), RenderType.debugQuads());
             }
         }
         else if (axis == Direction.Axis.Z)
@@ -1318,7 +1352,7 @@ public class ShapesRenderer
                 float y = r * Mth.sin(theta);
                 builder.addVertex(x + cx, cy + y, cz).setColor(red, grn, blu, alpha);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugTriangleFan());
             if (!isFlat)
             {
                 BufferBuilder builderr = tesselator.begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
@@ -1330,7 +1364,7 @@ public class ShapesRenderer
                     float y = r * Mth.sin(theta);
                     builderr.addVertex(x + cx, cy + y, cz + h).setColor(red, grn, blu, alpha);
                 }
-                BufferUploader.drawWithShader(builderr.buildOrThrow());
+                drawWithShader(builderr.buildOrThrow(), RenderType.debugTriangleFan());
 
                 BufferBuilder builderrr = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);  // quad strip to quads
                 float xp = r;
@@ -1347,7 +1381,7 @@ public class ShapesRenderer
                     xp = x;
                     yp = y;
                 }
-                BufferUploader.drawWithShader(builderrr.buildOrThrow());
+                drawWithShader(builderrr.buildOrThrow(), RenderType.debugQuads());
             }
         }
     }
@@ -1372,7 +1406,7 @@ public class ShapesRenderer
                 float y = r * Mth.cos(phi);
                 builder.addVertex(x + cx, y + cy, z + cz).setColor(red, grn, blu, alpha);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
         }
         for (int j = 0; j <= num_steps180; j++)
         {
@@ -1387,7 +1421,7 @@ public class ShapesRenderer
                 float y = r * Mth.cos(phi);
                 builder.addVertex(x + cx, y + cy, z + cz).setColor(red, grn, blu, alpha);
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugLineStrip(1));
         }
 
     }
@@ -1429,7 +1463,7 @@ public class ShapesRenderer
                 zbp = zp;
                 yp = y;
             }
-            BufferUploader.drawWithShader(builder.buildOrThrow());
+            drawWithShader(builder.buildOrThrow(), RenderType.debugQuads());
         }
     }
 }

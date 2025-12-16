@@ -59,11 +59,11 @@ public class SystemInfo
             return StringValue.of(tlf);
         });
         put("world_dimensions", c -> ListValue.wrap(c.server().levelKeys().stream().map(k -> ValueConversions.of(k.location()))));
-        put("world_spawn_point", c -> ValueConversions.of(c.server().overworld().getLevelData().getSpawnPos()));
+        put("world_spawn_point", c -> ValueConversions.of(c.server().overworld().getLevelData().getRespawnData().pos()));
 
-        put("world_bottom", c -> new NumericValue(c.level().getMinBuildHeight()));
+        put("world_bottom", c -> new NumericValue(c.level().getMinY()));
 
-        put("world_top", c -> new NumericValue(c.level().getMaxBuildHeight()));
+        put("world_top", c -> new NumericValue(c.level().getMaxY()));
 
         put("world_center", c -> {
             WorldBorder worldBorder = c.level().getWorldBorder();
@@ -90,9 +90,10 @@ public class SystemInfo
         put("game_protocol", c -> NumericValue.of(SharedConstants.getProtocolVersion()));
         put("game_major_target", c -> NumericValue.of(Vanilla.MinecraftServer_getReleaseTarget(c.server())[0]));
         put("game_minor_target", c -> NumericValue.of(Vanilla.MinecraftServer_getReleaseTarget(c.server())[1]));
-        put("game_stable", c -> BooleanValue.of(SharedConstants.getCurrentVersion().isStable()));
-        put("game_data_version", c -> NumericValue.of(SharedConstants.getCurrentVersion().getDataVersion().getVersion()));
-        put("game_pack_version", c -> NumericValue.of(SharedConstants.getCurrentVersion().getPackVersion(PackType.SERVER_DATA)));
+        put("game_stable", c -> BooleanValue.of(SharedConstants.getCurrentVersion().stable()));
+        put("game_data_version", c -> NumericValue.of(SharedConstants.getCurrentVersion().dataVersion().version()));
+        put("game_pack_version", c -> NumericValue.of(SharedConstants.getCurrentVersion().packVersion(PackType.SERVER_DATA).major()));
+        put("game_pack_minor_version", c -> NumericValue.of(SharedConstants.getCurrentVersion().packVersion(PackType.SERVER_DATA).minor()));
 
         put("server_ip", c -> StringValue.of(c.server().getLocalIp()));
         put("server_whitelisted", c -> BooleanValue.of(c.server().isEnforceWhitelist()));
@@ -165,7 +166,7 @@ public class SystemInfo
         put("world_gamerules", c -> {
             Map<Value, Value> rules = new HashMap<>();
             GameRules gameRules = c.level().getGameRules();
-            GameRules.visitGameRuleTypes(new GameRules.GameRuleTypeVisitor()
+            gameRules.visitGameRuleTypes(new GameRules.GameRuleTypeVisitor()
             {
                 @Override
                 public <T extends GameRules.Value<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type)

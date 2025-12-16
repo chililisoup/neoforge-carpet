@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
@@ -23,11 +24,11 @@ import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ChunkMap.DistanceManager;
 import net.minecraft.server.level.ChunkResult;
-import net.minecraft.server.level.ChunkTaskPriorityQueueSorter;
+//import net.minecraft.server.level.ChunkTaskPriorityQueueSorter;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ThreadedLevelLightEngine;
 import net.minecraft.server.level.TicketType;
-import net.minecraft.server.level.progress.ChunkProgressListener;
+
 import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -46,7 +47,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import carpet.fakes.ChunkHolderInterface;
-import carpet.fakes.ChunkTicketManagerInterface;
 import carpet.fakes.ServerLightingProviderInterface;
 import carpet.fakes.ThreadedAnvilChunkStorageInterface;
 import carpet.script.utils.WorldTools;
@@ -76,17 +76,17 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
     @Final
     private ThreadedLevelLightEngine lightEngine;
 
-    @Shadow
-    @Final
-    private ChunkTaskPriorityQueueSorter queueSorter;
+    //@Shadow
+    //@Final
+    //private ChunkTaskPriorityQueueSorter queueSorter;
 
     @Shadow
     @Final
     private BlockableEventLoop<Runnable> mainThreadExecutor;
 
-    @Shadow
-    @Final
-    private ChunkProgressListener progressListener;
+    //@Shadow
+    //@Final
+    //private ChunkProgressListener progressListener;
 
     @Shadow
     @Final
@@ -95,8 +95,8 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
     @Shadow
     protected abstract boolean promoteChunkMap();
 
-    @Shadow
-    protected abstract Iterable<ChunkHolder> getChunks();
+    //@Shadow
+    //protected abstract void forEachReadyToSendChunk(Consumer<LevelChunk> consumer); // for getChunks()
 
 
     @Shadow
@@ -165,7 +165,6 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
             this.world.getServer().execute(() -> CHUNK_LOADED.onChunkEvent(this.world, chpos, generated));
         }
     }
-     */
 
     @Unique
     private void addTicket(ChunkPos pos, ChunkStatus status)
@@ -180,7 +179,6 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
     }
 
 
-    /*
     @Unique
     private void addRelightTicket(ChunkPos pos)
     {
@@ -195,7 +193,7 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
                 () -> "release relight ticket " + pos
         ));
     }
-     */
+
     @Unique
     private void tickTicketManager()
     {
@@ -220,7 +218,7 @@ public abstract class ChunkMap_scarpetChunkCreationMixin implements ThreadedAnvi
     }
 
 
-    /*
+
     @Unique
     private Set<ChunkPos> loadExistingChunksFromDisk(Set<ChunkPos> requestedChunks)
     {

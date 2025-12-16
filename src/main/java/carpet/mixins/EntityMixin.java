@@ -32,9 +32,9 @@ public abstract class EntityMixin implements EntityInterface
         return partialTicks == 1.0F ? this.yRot : Mth.lerp(partialTicks, this.yRotO, this.yRot);
     }
 
-    @Inject(method = "isControlledByLocalInstance", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isLocalInstanceAuthoritative", at = @At("HEAD"), cancellable = true)
     private void isFakePlayer(CallbackInfoReturnable<Boolean> cir)
     {
-        if (getControllingPassenger() instanceof EntityPlayerMPFake) cir.setReturnValue(!level.isClientSide);
+        if (getControllingPassenger() instanceof EntityPlayerMPFake) cir.setReturnValue(!level.isClientSide());
     }
 }

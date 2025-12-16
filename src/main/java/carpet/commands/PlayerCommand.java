@@ -29,16 +29,16 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.server.players.OldUsersConverter;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 import java.util.function.Consumer;
 
 import static net.minecraft.commands.Commands.argument;
@@ -164,7 +164,7 @@ public class PlayerCommand
             return false;
         }
 
-        if (!source.getServer().getPlayerList().isOp(sender.getGameProfile()))
+        if (!source.getServer().getPlayerList().isOp(sender.nameAndId()))
         {
             if (sender != player && !(player instanceof EntityPlayerMPFake))
             {
@@ -190,12 +190,30 @@ public class PlayerCommand
         MinecraftServer server = context.getSource().getServer();
         PlayerList manager = server.getPlayerList();
 
+        if (EntityPlayerMPFake.isSpawningPlayer(playerName))
+        {
+            Messenger.m(context.getSource(), "r Player ", "rb " + playerName, "r  is currently logging on");
+            return true;
+        }
         if (manager.getPlayerByName(playerName) != null)
         {
             Messenger.m(context.getSource(), "r Player ", "rb " + playerName, "r  is already logged on");
             return true;
         }
-        GameProfile profile = server.getProfileCache().get(playerName).orElse(null);
+        UUID uuid = OldUsersConverter.convertMobOwnerIfNecessary(server, playerName);
+        if (uuid == null)
+        {
+            if (!CarpetSettings.allowSpawningOfflinePlayers)
+            {
+                Messenger.m(context.getSource(), "r Player "+playerName+" is either banned by Mojang, or auth servers are down. " +
+                        "Banned players can only be summoned in Singleplayer and in servers in off-line mode.");
+                return true;
+            } else {
+                uuid = UUIDUtil.createOfflinePlayerUUID(playerName);
+            }
+        }
+        //GameProfile profile = new GameProfile(uuid, playerName);
+        NameAndId profile = server.services().nameToIdCache().get(uuid).orElse(null);
         if (profile == null)
         {
             if (!CarpetSettings.allowSpawningOfflinePlayers)
@@ -204,7 +222,7 @@ public class PlayerCommand
                         "Banned players can only be summoned in Singleplayer and in servers in off-line mode.");
                 return true;
             } else {
-                profile = new GameProfile(UUIDUtil.createOfflinePlayerUUID(playerName), playerName);
+                profile = new NameAndId(UUIDUtil.createOfflinePlayerUUID(playerName), playerName);
             }
         }
         if (manager.getBans().isBanned(profile))
@@ -223,7 +241,8 @@ public class PlayerCommand
     private static int kill(CommandContext<CommandSourceStack> context)
     {
         if (cantReMove(context)) return 0;
-        getPlayer(context).kill();
+        ServerPlayer player = getPlayer(context);
+        player.kill(player.level());
         return 1;
     }
 
@@ -331,12 +350,12 @@ public class PlayerCommand
             Messenger.m(context.getSource(), "r Cannot shadow fake players");
             return 0;
         }
-        if (player.getServer().isSingleplayerOwner(player.getGameProfile())) {
+        if (player.level().getServer().isSingleplayerOwner(player.nameAndId())) {
             Messenger.m(context.getSource(), "r Cannot shadow single-player server owner");
             return 0;
         }
 
-        EntityPlayerMPFake.createShadow(player.server, player);
+        EntityPlayerMPFake.createShadow(player.level().getServer(), player);
         return 1;
     }
 }

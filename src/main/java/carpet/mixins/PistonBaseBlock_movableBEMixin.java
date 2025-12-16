@@ -5,6 +5,10 @@ import carpet.fakes.PistonBlockEntityInterface;
 import com.google.common.collect.Lists;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalRef;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -13,7 +17,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CommandBlock;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.piston.MovingPistonBlock;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.piston.PistonStructureResolver;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,6 +24,7 @@ import net.minecraft.world.level.material.PushReaction;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
@@ -34,8 +38,6 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
     {
         super(block$Settings_1);
     }
-    
-    private ThreadLocal<List<BlockEntity>> list1_BlockEntities = new ThreadLocal<>(); //Unneccessary ThreadLocal if client and server use different PistonBlock instances
 
     @Inject(method = "isPushable", cancellable = true, at = @At(value = "RETURN", ordinal = 3, shift = At.Shift.BEFORE))
     private static void movableCMD(BlockState blockState_1, Level world_1, BlockPos blockPos_1,
@@ -54,13 +56,14 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
         //Making PISTON_EXTENSION (BlockPistonMoving) pushable would not work as its createNewTileEntity()-method returns null
         return block != Blocks.ENDER_CHEST && block != Blocks.ENCHANTING_TABLE &&
                        block != Blocks.END_GATEWAY && block != Blocks.END_PORTAL && block != Blocks.MOVING_PISTON  &&
-                       block != Blocks.SPAWNER;
+                       block != Blocks.SPAWNER
+                       && block != Blocks.SCULK_SENSOR && block != Blocks.CALIBRATED_SCULK_SENSOR; // these have weird behaviour and crashes, #1473, also #1885
     }
     
-    @WrapOperation(method = "isPushable", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;hasBlockEntity()Z"))
-    private static boolean ifHasBlockEntity(BlockState blockState, Operation<Boolean> original)
+    @Redirect(method = "isPushable", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;hasBlockEntity()Z"))
+    private static boolean ifHasBlockEntity(BlockState blockState)
     {
-        if (!original.call(blockState))
+        if (!blockState.hasBlockEntity())
         {
             return false;
         }
@@ -70,14 +73,14 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
         }
     }
 
-    @WrapOperation(method = "isPushable", at = @At(
+    @Redirect(method = "isPushable", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;getPistonPushReaction()Lnet/minecraft/world/level/material/PushReaction;"
     ))
-    private static PushReaction moveGrindstones(BlockState blockState, Operation<PushReaction> original)
+    private static PushReaction moveGrindstones(BlockState blockState)
     {
         if (CarpetSettings.movableBlockEntities && blockState.getBlock() == Blocks.GRINDSTONE) return PushReaction.NORMAL;
-        return original.call(blockState);
+        return blockState.getPistonPushReaction();
     }
 
     @Inject(method = "moveBlocks", at = @At(value = "INVOKE", shift = At.Shift.BEFORE,
@@ -85,17 +88,17 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
     private void onMove(Level world_1, BlockPos blockPos_1, Direction direction_1, boolean boolean_1,
                         CallbackInfoReturnable<Boolean> cir, BlockPos blockPos_2, PistonStructureResolver pistonHandler_1, Map<?, ?> map_1,
                         List<BlockPos> list_1, List<BlockState> list_2, List<?> list_3, BlockState[] blockStates_1,
-                        Direction direction_2, int int_2)
+                        Direction direction_2, int int_2, @Share("blockEntities") LocalRef<List<BlockEntity>> blockEntities)
     {
         //Get the blockEntities and remove them from the world before any magic starts to happen
         if (CarpetSettings.movableBlockEntities)
         {
-            list1_BlockEntities.set(Lists.newArrayList());
+            blockEntities.set(Lists.newArrayList());
             for (int i = 0; i < list_1.size(); ++i)
             {
                 BlockPos blockpos = list_1.get(i);
                 BlockEntity blockEntity = (list_2.get(i).hasBlockEntity()) ? world_1.getBlockEntity(blockpos) : null;
-                list1_BlockEntities.get().add(blockEntity);
+                blockEntities.get().add(blockEntity);
                 if (blockEntity != null)
                 {
                     //hopefully this call won't have any side effects in the future, such as dropping all the BlockEntity's items
@@ -106,37 +109,15 @@ public abstract class PistonBaseBlock_movableBEMixin extends DirectionalBlock
             }
         }
     }
-    
-    @Inject(method = "moveBlocks", at = @At(value = "INVOKE", shift = At.Shift.BEFORE,
-            target = "Lnet/minecraft/world/level/Level;setBlockEntity(Lnet/minecraft/world/level/block/entity/BlockEntity;)V", ordinal = 0),
-            locals = LocalCapture.CAPTURE_FAILHARD)
-    private void setBlockEntityWithCarried(Level world_1, BlockPos blockPos_1, Direction direction_1, boolean boolean_1,
-                                           CallbackInfoReturnable<Boolean> cir, BlockPos blockPos_2, PistonStructureResolver pistonHandler_1, Map<?, ?> map_1, List<?> list_1,
-                                           List<BlockState> list_2, List<?> list_3, BlockState[] blockStates_1, Direction direction_2, int int_2,
-                                           int int_3, BlockPos blockPos_4, BlockState blockState9, BlockState blockState4)
-    {
-        BlockEntity blockEntityPiston = MovingPistonBlock.newMovingBlockEntity(blockPos_4, blockState4, list_2.get(int_3),
-                direction_1, boolean_1, false);
-        if (CarpetSettings.movableBlockEntities)
-            ((PistonBlockEntityInterface) blockEntityPiston).setCarriedBlockEntity(list1_BlockEntities.get().get(int_3));
-        world_1.setBlockEntity(blockEntityPiston);
-        //world_1.setBlockEntity(blockPos_4, blockEntityPiston);
-    }
-    
+
     @WrapOperation(method = "moveBlocks", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/Level;setBlockEntity(Lnet/minecraft/world/level/block/entity/BlockEntity;)V",
             ordinal = 0))
-    private void dontDoAnything(Level level, BlockEntity blockEntity, Operation<Void> original)
+    private void setCarriedOnMove(Level instance, BlockEntity blockEntity, Operation<Void> original,
+            @Local(ordinal = 1) int index, @Share("blockEntities") LocalRef<List<BlockEntity>> blockEntities)
     {
-        if (!CarpetSettings.movableBlockEntities) original.call(level, blockEntity);
-    }
-    
-    @WrapOperation(method = "moveBlocks", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/world/level/block/piston/MovingPistonBlock;newMovingBlockEntity(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/Direction;ZZ)Lnet/minecraft/world/level/block/entity/BlockEntity;",
-            ordinal = 0))
-    private BlockEntity returnNull(BlockPos blockPos, BlockState blockState, BlockState blockState2, Direction direction, boolean bl, boolean bl2, Operation<BlockEntity> original)
-    {
-        if (CarpetSettings.movableBlockEntities) return null;
-        else return original.call(blockPos, blockState, blockState2, direction, bl, bl2);
+        if (CarpetSettings.movableBlockEntities)
+            ((PistonBlockEntityInterface) blockEntity).setCarriedBlockEntity(blockEntities.get().get(index));
+        original.call(instance, blockEntity);
     }
 }

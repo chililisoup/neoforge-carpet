@@ -33,9 +33,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -142,17 +142,17 @@ public class Entities
             Vec3 vec3d = position.vec;
 
             ServerLevel serverWorld = cc.level();
-            Entity entity = EntityType.loadEntityRecursive(tag, serverWorld, e -> {
-                e.moveTo(vec3d.x, vec3d.y, vec3d.z, e.getYRot(), e.getXRot());
+            Entity entity = EntityType.loadEntityRecursive(tag, serverWorld, EntitySpawnReason.COMMAND, e -> {
+                e.snapTo(vec3d.x, vec3d.y, vec3d.z, e.getYRot(), e.getXRot());
                 return e;
             });
             if (entity == null)
             {
                 return Value.NULL;
             }
-            if (!hasTag && entity instanceof final Mob mob)
+            if (!hasTag && entity instanceof Mob mob)
             {
-                mob.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(entity.blockPosition()), MobSpawnType.COMMAND, null);
+                mob.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(entity.blockPosition()), EntitySpawnReason.COMMAND, null);
             }
             if (!serverWorld.tryAddFreshEntityWithPassengers(entity))
             {
