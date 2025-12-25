@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.advancements.critereon.MinMaxBounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.Vec3i;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.behavior.PositionTracker;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -87,7 +89,7 @@ public class ValueConversions
         return ListValue.of(StringValue.of(Colors.mapColourName.get(color)), ofRGB(color.col));
     }
 
-    public static <T extends Number> Value of(MinMaxBounds<T> range)
+    public static <T extends Number & Comparable<T>> Value of(MinMaxBounds<T> range)
     {
         return ListValue.of(
                 range.min().map(NumericValue::of).orElse(Value.NULL),
@@ -98,10 +100,15 @@ public class ValueConversions
     public static Value of(ItemStack stack, RegistryAccess regs)
     {
         return stack == null || stack.isEmpty() ? Value.NULL : ListValue.of(
-                of(regs.registryOrThrow(Registries.ITEM).getKey(stack.getItem())),
+                of(stack.getItem(), regs),
                 new NumericValue(stack.getCount()),
                 NBTSerializableValue.fromStack(stack, regs)
         );
+    }
+
+    public static Value of(Item item, RegistryAccess regs)
+    {
+        return of(regs.lookupOrThrow(Registries.ITEM).getKey(item));
     }
 
     public static Value of(Objective objective)
@@ -137,7 +144,7 @@ public class ValueConversions
     {
         if (dimensionValue instanceof EntityValue)
         {
-            return ((EntityValue) dimensionValue).getEntity().getCommandSenderWorld();
+            return ((EntityValue) dimensionValue).getEntity().level();
         }
         else if (dimensionValue instanceof BlockValue bv)
         {
@@ -187,6 +194,11 @@ public class ValueConversions
     public static Value of(TagKey<?> tagKey)
     {
         return of(tagKey.location());
+    }
+
+    public static Value of(HolderSet.Named<?> tagKey)
+    {
+        return of(tagKey.key().location());
     }
 
     public static Value of(@Nullable ResourceLocation id)
@@ -253,7 +265,7 @@ public class ValueConversions
         }
         if (v instanceof final BlockPos pos)
         {
-            return new BlockValue(null, (ServerLevel) e.getCommandSenderWorld(), pos);
+            return new BlockValue(null, (ServerLevel) e.level(), pos);
         }
         if (v instanceof final Number number)
         {
@@ -265,7 +277,7 @@ public class ValueConversions
         }
         if (v instanceof final UUID uuid)
         {
-            return ofUUID((ServerLevel) e.getCommandSenderWorld(), uuid);
+            return ofUUID((ServerLevel) e.level(), uuid);
         }
         if (v instanceof final DamageSource source)
         {
@@ -276,16 +288,16 @@ public class ValueConversions
         }
         if (v instanceof final Path path)
         {
-            return fromPath((ServerLevel) e.getCommandSenderWorld(), path);
+            return fromPath((ServerLevel) e.level(), path);
         }
         if (v instanceof final PositionTracker tracker)
         {
-            return new BlockValue(null, (ServerLevel) e.getCommandSenderWorld(), tracker.currentBlockPosition());
+            return new BlockValue(null, (ServerLevel) e.level(), tracker.currentBlockPosition());
         }
         if (v instanceof final WalkTarget target)
         {
             return ListValue.of(
-                    new BlockValue(null, (ServerLevel) e.getCommandSenderWorld(), target.getTarget().currentBlockPosition()),
+                    new BlockValue(null, (ServerLevel) e.level(), target.getTarget().currentBlockPosition()),
                     new NumericValue(target.getSpeedModifier()),
                     new NumericValue(target.getCloseEnoughDist())
             );
@@ -362,7 +374,7 @@ public class ValueConversions
             if (box.maxX() >= box.minX() && box.maxY() >= box.minY() && box.maxZ() >= box.minZ())
             {
                 pieces.add(ListValue.of(
-                        NBTSerializableValue.nameFromRegistryId(regs.registryOrThrow(Registries.STRUCTURE_PIECE).getKey(piece.getType())),
+                        NBTSerializableValue.nameFromRegistryId(regs.lookupOrThrow(Registries.STRUCTURE_PIECE).getKey(piece.getType())),
                         (piece.getOrientation() == null) ? Value.NULL : new StringValue(piece.getOrientation().getName()),
                         ListValue.fromTriple(box.minX(), box.minY(), box.minZ()),
                         ListValue.fromTriple(box.maxX(), box.maxY(), box.maxZ())
@@ -451,10 +463,10 @@ public class ValueConversions
     public static Value ofBlockPredicate(RegistryAccess registryAccess, Predicate<BlockInWorld> blockPredicate)
     {
         Vanilla.BlockPredicatePayload payload = Vanilla.BlockPredicatePayload.of(blockPredicate);
-        Registry<Block> blocks = registryAccess.registryOrThrow(Registries.BLOCK);
+        Registry<Block> blocks = registryAccess.lookupOrThrow(Registries.BLOCK);
         return ListValue.of(
                 payload.state() == null ? Value.NULL : of(blocks.getKey(payload.state().getBlock())),
-                payload.tagKey() == null ? Value.NULL : of(blocks.getTag(payload.tagKey()).get().key()),
+                payload.tagKey() == null ? Value.NULL : of(blocks.get(payload.tagKey()).get().key()),
                 MapValue.wrap(payload.properties()),
                 payload.tag() == null ? Value.NULL : new NBTSerializableValue(payload.tag())
         );

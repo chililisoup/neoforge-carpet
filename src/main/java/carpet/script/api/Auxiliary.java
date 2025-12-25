@@ -97,6 +97,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -131,7 +132,7 @@ public class Auxiliary
             CarpetContext cc = (CarpetContext) c;
             if (lv.isEmpty())
             {
-                return ListValue.wrap(cc.registry(Registries.SOUND_EVENT).holders().map(soundEventReference -> ValueConversions.of(soundEventReference.key().location())));
+                return ListValue.wrap(cc.registry(Registries.SOUND_EVENT).listElements().map(soundEventReference -> ValueConversions.of(soundEventReference.key().location())));
             }
             String rawString = lv.get(0).getString();
             ResourceLocation soundName = InputValidator.identifierOf(rawString);
@@ -176,7 +177,7 @@ public class Auxiliary
             CarpetContext cc = (CarpetContext) c;
             if (lv.isEmpty())
             {
-                return ListValue.wrap(cc.registry(Registries.PARTICLE_TYPE).holders().map(particleTypeReference -> ValueConversions.of(particleTypeReference.key().location())));
+                return ListValue.wrap(cc.registry(Registries.PARTICLE_TYPE).listElements().map(particleTypeReference -> ValueConversions.of(particleTypeReference.key().location())));
             }
             MinecraftServer ms = cc.server();
             ServerLevel world = cc.level();
@@ -208,14 +209,14 @@ public class Auxiliary
             {
                 for (ServerPlayer p : (world.players()))
                 {
-                    world.sendParticles(p, particle, true, vec.x, vec.y, vec.z, count,
+                    world.sendParticles(p, particle, true, true, vec.x, vec.y, vec.z, count,
                             spread, spread, spread, speed);
                 }
             }
             else
             {
                 world.sendParticles(player,
-                        particle, true, vec.x, vec.y, vec.z, count,
+                        particle, true, true, vec.x, vec.y, vec.z, count,
                         spread, spread, spread, speed);
             }
 
@@ -401,7 +402,7 @@ public class Auxiliary
                     yoffset = -armorstand.getBbHeight() + 0.3;
                 }
             }
-            armorstand.moveTo(
+            armorstand.snapTo(
                     pointLocator.vec.x,
                     //pointLocator.vec.y - ((!interactable && targetBlock == null)?0.41f:((targetBlock==null)?(armorstand.getHeight()+0.41):(armorstand.getHeight()-0.3))),
                     pointLocator.vec.y + yoffset,
@@ -684,12 +685,17 @@ public class Auxiliary
             try
             {
                 Component[] error = {null};
+                OptionalLong[] returnValue = {OptionalLong.empty()};
                 List<Component> output = new ArrayList<>();
                 s.getServer().getCommands().performPrefixedCommand(
-                        new SnoopyCommandSource(s, error, output),
+                        new SnoopyCommandSource(s, error, output, returnValue),
                         lv.get(0).getString());
+                if (returnValue[0].isEmpty())
+                {
+                    return Value.NULL;
+                }
                 return ListValue.of(
-                        NumericValue.ZERO,
+                        NumericValue.of(returnValue[0].getAsLong()),
                         ListValue.wrap(output.stream().map(FormattedTextValue::new)),
                         FormattedTextValue.of(error[0])
                 );
@@ -1062,7 +1068,7 @@ public class Auxiliary
             ResourceLocation statName;
             category = InputValidator.identifierOf(lv.get(1).getString());
             statName = InputValidator.identifierOf(lv.get(2).getString());
-            StatType<?> type = cc.registry(Registries.STAT_TYPE).get(category);
+            StatType<?> type = cc.registry(Registries.STAT_TYPE).getValue(category);
             if (type == null)
             {
                 return Value.NULL;
@@ -1189,7 +1195,8 @@ public class Auxiliary
                         Path zipRoot = zipfs.getPath("/");
                         zipValueToJson(zipRoot.resolve("pack.mcmeta"), MapValue.wrap(
                                 Map.of(StringValue.of("pack"), MapValue.wrap(Map.of(
-                                        StringValue.of("pack_format"), new NumericValue(SharedConstants.getCurrentVersion().getPackVersion(PackType.SERVER_DATA)),
+                                        StringValue.of("min_format"), new NumericValue(SharedConstants.getCurrentVersion().packVersion(PackType.SERVER_DATA).major()),
+                                        StringValue.of("max_format"), new NumericValue(SharedConstants.getCurrentVersion().packVersion(PackType.SERVER_DATA).major()),
                                         StringValue.of("description"), StringValue.of(name),
                                         StringValue.of("source"), StringValue.of("scarpet")
                                 )))
@@ -1382,7 +1389,7 @@ public class Auxiliary
     @Nullable
     private static <T> Stat<T> getStat(StatType<T> type, ResourceLocation id)
     {
-        T key = type.getRegistry().get(id);
+        T key = type.getRegistry().getValue(id);
         if (key == null || !type.contains(key))
         {
             return null;

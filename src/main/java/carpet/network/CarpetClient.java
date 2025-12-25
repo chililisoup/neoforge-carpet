@@ -8,15 +8,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import org.jetbrains.annotations.NotNull;
 
 public class CarpetClient
 {
@@ -36,7 +31,7 @@ public class CarpetClient
             output.writeNbt(data);
         }
 
-        @Override public Type<CarpetPayload> type()
+        @Override public CustomPacketPayload.@NotNull Type<? extends CustomPacketPayload> type()
         {
             return TYPE;
         }
@@ -111,7 +106,7 @@ public class CarpetClient
             ListTag outputTag = (ListTag) tag.get("output");
             for (int i = 0; i < outputTag.size(); i++)
             {
-                CarpetSettings.LOG.info(" - response: " + Component.Serializer.fromJson(outputTag.getString(i), clientPlayer.registryAccess()).getString());
+                CarpetSettings.LOG.info(" - response: " + outputTag.getString(i).orElseThrow());
             }
         }
     }

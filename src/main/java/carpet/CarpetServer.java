@@ -41,14 +41,15 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.commands.PerfCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 @Mod("carpet")
@@ -81,8 +82,8 @@ public class CarpetServer // static for now - easier to handle all around the co
     public CarpetServer(IEventBus modEventBus)
     {
         modEventBus.addListener(this::onGameStarted);
-        modEventBus.addListener(this::registerPackets);
-
+        modEventBus.addListener(this::registerServerPackets);
+        modEventBus.addListener(this::registerClientPackets);
         IEventBus eventBus = NeoForge.EVENT_BUS;
         eventBus.addListener(this::onServerLoaded);
         eventBus.addListener(this::onServerLoadedWorlds);
@@ -165,22 +166,25 @@ public class CarpetServer // static for now - easier to handle all around the co
         if (environment != Commands.CommandSelection.DEDICATED)
             PerfCommand.register(dispatcher);
         
-        if (!FMLLoader.isProduction())
+        if (!FMLLoader.getCurrent().isProduction())
             TestCommand.register(dispatcher);
         // todo 1.16 - re-registerer apps if that's a reload operation.
     }
 
-    public void registerPackets(final RegisterPayloadHandlersEvent event) {
+    @SubscribeEvent
+    public void registerServerPackets(final RegisterPayloadHandlersEvent event) {
         // Sets the current network version
         final PayloadRegistrar registrar = event.registrar("1").optional();
-
         registrar.playBidirectional(
                 CarpetClient.CarpetPayload.TYPE,
                 CarpetClient.CarpetPayload.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(
-                        ClientNetworkHandler::onServerData,
                         ServerNetworkHandler::onClientData
-                )
+        );
+    }
+    @SubscribeEvent
+    public void registerClientPackets(final RegisterClientPayloadHandlersEvent event) {
+        event.register(CarpetClient.CarpetPayload.TYPE,
+                ClientNetworkHandler::onServerData
         );
     }
 
@@ -198,7 +202,7 @@ public class CarpetServer // static for now - easier to handle all around the co
         LoggerRegistry.playerDisconnected(player);
         extensions.forEach(e -> e.onPlayerLoggedOut(player));
         // first case client, second case server
-        CarpetScriptServer runningScriptServer = (player.getServer() == null) ? scriptServer : Vanilla.MinecraftServer_getScriptServer(player.getServer());
+        CarpetScriptServer runningScriptServer = (player.level().getServer() == null) ? scriptServer : Vanilla.MinecraftServer_getScriptServer(player.level().getServer());
         if (runningScriptServer != null && !runningScriptServer.stopAll) {
             runningScriptServer.onPlayerLoggedOut(player, reason);
         }

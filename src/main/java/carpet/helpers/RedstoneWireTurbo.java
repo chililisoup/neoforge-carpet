@@ -80,9 +80,6 @@ public class RedstoneWireTurbo
      
     /* Reference to RedstoneWireBlock object, which uses this accelerator */
     private final RedStoneWireBlock wire;
-
-    /* BlockBehaviour.UPDATE_SHAPE_ORDER access transformer wasn't working so it's copied here */
-    private static final Direction[] UPDATE_SHAPE_ORDER = new Direction[]{Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH, Direction.DOWN, Direction.UP};
      
      
     /*
@@ -679,7 +676,7 @@ public class RedstoneWireTurbo
                     // call BlockStateBase#neighborChanged directly. This change mostly
                     // restores old behavior, at the cost of bypassing the
                     // max-chained-neighbor-updates server property.
-                    worldIn.getBlockState(upd.self).handleNeighborChanged(worldIn, upd.self, wire, upd.parent, false);
+                    worldIn.getBlockState(upd.self).handleNeighborChanged(worldIn, upd.self, wire, null, false);
                 }
             }
  
@@ -881,7 +878,6 @@ public class RedstoneWireTurbo
             // position directly above the node being calculated is always
             // at index 1.
             UpdateNode center_up = upd.neighbor_nodes[1];
-            if (center_up == null) return state;
             boolean center_up_is_cube = center_up.currentState.isRedstoneConductor(worldIn, center_up.self);  //isSimpleFUllBLock
  
             for (int m=0; m<4; m++) {
@@ -951,11 +947,11 @@ public class RedstoneWireTurbo
         // these updates will be added to the stack and processed after the entire network has updated
         state.updateIndirectNeighbourShapes(level, pos, Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_CLIENTS);
 
-        for (Direction dir : UPDATE_SHAPE_ORDER) {
+        for (Direction dir : Block.UPDATE_SHAPE_ORDER) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
 
-            BlockState newState = neighborState.updateShape(dir.getOpposite(), state, level, neighborPos, pos);
+            BlockState newState = neighborState.updateShape(level, level, neighborPos, dir.getOpposite(), pos, state, level.getRandom());
             Block.updateOrDestroy(neighborState, newState, level, neighborPos, Block.UPDATE_CLIENTS);
         }
     }

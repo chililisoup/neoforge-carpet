@@ -3,6 +3,7 @@ package carpet.mixins;
 import carpet.fakes.ClientConnectionInterface;
 import carpet.logging.logHelpers.PacketCounter;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -20,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class Connection_packetCounterMixin implements ClientConnectionInterface
 {
     // Add to the packet counter whenever a packet is received.
-    @Inject(method = "channelRead0", at = @At("HEAD"))
+    @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V", at = @At("HEAD"))
     private void packetInCount(ChannelHandlerContext channelHandlerContext_1, Packet<?> packet_1, CallbackInfo ci)
     {
         PacketCounter.totalIn++;
@@ -28,7 +29,7 @@ public abstract class Connection_packetCounterMixin implements ClientConnectionI
     
     // Add to the packet counter whenever a packet is sent.
     @Inject(method = "sendPacket", at = @At("HEAD"))
-    private void packetOutCount(final Packet<?> packet, final PacketSendListener packetSendListener, final boolean bl, final CallbackInfo ci)
+    private void packetOutCount(Packet<?> packet, ChannelFutureListener channelFutureListener, boolean bl, CallbackInfo ci)
     {
         PacketCounter.totalOut++;
     }

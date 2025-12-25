@@ -1,17 +1,19 @@
 package carpet.mixins;
 
 import carpet.CarpetSettings;
+import carpet.fakes.DefaultRedstoneWireEvaluatorInferface;
 import carpet.fakes.RedstoneWireBlockInterface;
 import carpet.helpers.RedstoneWireTurbo;
 import com.google.common.collect.Sets;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.world.level.redstone.DefaultRedstoneWireEvaluator;
+import net.minecraft.world.level.redstone.Orientation;
+import net.minecraft.world.level.redstone.RedstoneWireEvaluator;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
@@ -23,13 +25,15 @@ import net.minecraft.world.level.block.RedStoneWireBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
+import javax.annotation.Nullable;
+
 import static net.minecraft.world.level.block.RedStoneWireBlock.POWER;
 
 @Mixin(RedStoneWireBlock.class)
 public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockInterface {
 
     @Shadow
-    private int calculateTargetStrength(Level world, BlockPos pos) { return 0; }
+    private void updatePowerStrength(Level world_1, BlockPos blockPos_1, BlockState blockState_1, @Nullable final Orientation orientation, boolean sup) { }
 
     @Override
     @Accessor("shouldSignal")
@@ -38,6 +42,8 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
     @Override
     @Accessor("shouldSignal")
     public abstract boolean getWiresGivePower();
+
+    private RedstoneWireEvaluator legacy = new DefaultRedstoneWireEvaluator((RedStoneWireBlock)(Object) this);
 
     // =
 
@@ -51,18 +57,22 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
 
     // =
 
-    public boolean fastUpdate(Level world, BlockPos pos, BlockState state, BlockPos source) {
+    public void fastUpdate(Level world, BlockPos pos, BlockState state, Orientation o, boolean sup) {
         // [CM] fastRedstoneDust -- update based on carpet rule
-        if (!CarpetSettings.fastRedstoneDust) return false;
-        wireTurbo.updateSurroundingRedstone(world, pos, state, source);
-        return true;
+        if (CarpetSettings.fastRedstoneDust) {
+            BlockPos source = null; // todo this probably removes all improvements from the original method
+            // so needs to be evaluated if its worth keeping
+            wireTurbo.updateSurroundingRedstone(world, pos, state, source);
+            return;
+        }
+        updatePowerStrength(world, pos, state, o, sup);
     }
 
     /**
      * @author theosib, soykaf, gnembon
      */
     @Inject(method = "updatePowerStrength", at = @At("HEAD"), cancellable = true)
-    private void updateLogicAlternative(Level world, BlockPos pos, BlockState state, CallbackInfo cir) {
+    private void updateLogicAlternative(Level world, BlockPos pos, BlockState state, Orientation orientation, boolean sup, CallbackInfo cir) {
         if (CarpetSettings.fastRedstoneDust) {
             updateLogicPublic(world, pos, state);
             cir.cancel();
@@ -71,7 +81,7 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
 
     @Override
     public BlockState updateLogicPublic(Level world_1, BlockPos blockPos_1, BlockState blockState_1) {
-        int i = this.calculateTargetStrength(world_1, blockPos_1);
+        int i = ((DefaultRedstoneWireEvaluatorInferface)legacy).calculateTargetStrengthCM(world_1, blockPos_1);
         BlockState blockState = blockState_1;
         if (blockState_1.getValue(POWER) != i) {
             blockState_1 = blockState_1.setValue(POWER, i);
@@ -104,28 +114,37 @@ public abstract class RedstoneWireBlock_fastMixin implements RedstoneWireBlockIn
     // =
 
 
-    @WrapOperation(method = "onPlace", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
-    private void redirectOnBlockAddedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Operation<Void> original) {
-        if (!fastUpdate(world_1, blockPos_1, blockState_1, null))
-            original.call(self, world_1, blockPos_1, blockState_1);
+    @Redirect(method = "onPlace", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/redstone/Orientation;Z)V"))
+    private void redirectOnBlockAddedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Orientation o, boolean sup) {
+        fastUpdate(world_1, blockPos_1, blockState_1, o, sup);
     }
 
-    @WrapOperation(method = "onRemove", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
-    private void redirectOnStateReplacedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Operation<Void> original) {
-        if (!fastUpdate(world_1, blockPos_1, blockState_1, null))
-            original.call(self, world_1, blockPos_1, blockState_1);
+    @Redirect(method = "affectNeighborsAfterRemoval", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/redstone/Orientation;Z)V"))
+    private void redirectOnStateReplacedUpdate(RedStoneWireBlock self, Level world_1, BlockPos blockPos_1, BlockState blockState_1, Orientation o, boolean sup) {
+        fastUpdate(world_1, blockPos_1, blockState_1, o, sup);
     }
 
-    @WrapOperation(method = "neighborChanged", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    @Redirect(method = "neighborChanged", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/redstone/Orientation;Z)V"
+            //"Lnet/minecraft/world/level/block/RedStoneWireBlock;updatePowerStrength(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/redstone/Orientation;)V"
+    ))
+    //private void red(final RedStoneWireBlock instance, final Level level,
+    //                 final BlockPos blockPos, final BlockState blockState, final Orientation orientation)
     private void redirectNeighborUpdateUpdate(
             RedStoneWireBlock self,
             Level world_1,
             BlockPos blockPos_1,
             BlockState blockState_1,
-            Operation<Void> original,
-            @Local(argsOnly = true, ordinal = 1) BlockPos blockPos_3
-    ) {
-        if (!fastUpdate(world_1, blockPos_1, blockState_1, blockPos_3))
-            original.call(self, world_1, blockPos_1, blockState_1);
+            Orientation o,
+            boolean sup,
+            BlockState blockState_2,
+            Level world_2,
+            BlockPos blockPos_2,
+            Block block_1,
+            Orientation o2,
+            boolean b
+            )
+    {
+        fastUpdate(world_1, blockPos_1, blockState_1, o, sup);
     }
 }

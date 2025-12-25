@@ -10,6 +10,7 @@ import carpet.utils.Translations;
 import carpet.utils.CommandHelper;
 import carpet.utils.Messenger;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -707,7 +708,7 @@ public class CarpetSettings
 
             if (server.isDedicatedServer())
             {
-                int vd = (newValue >= 2)?newValue:((ServerInterface) server).getProperties().viewDistance;
+                int vd = (newValue >= 2)?newValue:((ServerInterface) server).getProperties().viewDistance.get();
                 if (vd != server.getPlayerList().getViewDistance())
                     server.getPlayerList().setViewDistance(vd);
                 return newValue;
@@ -748,7 +749,7 @@ public class CarpetSettings
 
             if (server.isDedicatedServer())
             {
-                int vd = (newValue >= 2)?newValue:((DedicatedServer) server).getProperties().simulationDistance;
+                int vd = (newValue >= 2)?newValue:((DedicatedServer) server).getProperties().simulationDistance.get();
                 if (vd != server.getPlayerList().getSimulationDistance())
                     server.getPlayerList().setSimulationDistance(vd);
                 return newValue;
@@ -907,7 +908,9 @@ public class CarpetSettings
         @Override
         public String validate(CommandSourceStack source, CarpetRule<String> currentRule, String newValue, String string) {
             if (source == null) return newValue; // closing or sync
-            Optional<Block> ignoredBlock = source.registryAccess().registryOrThrow(Registries.BLOCK).getOptional(ResourceLocation.tryParse(newValue));
+            var blockRegistry = BuiltInRegistries.BLOCK;
+            var loc = ResourceLocation.tryParse(newValue);
+            Optional<Block> ignoredBlock = blockRegistry.getOptional(loc);
             if (!ignoredBlock.isPresent()) {
                 Messenger.m(source, "r Unknown block '" + newValue + "'.");
                 return null;
@@ -1005,7 +1008,7 @@ public class CarpetSettings
                     {
                         double from = worldBorder.getSize();
                         double to = worldBorder.getLerpTarget();
-                        long time = worldBorder.getLerpRemainingTime();
+                        long time = worldBorder.getLerpTime();
                         worldBorder.lerpSizeBetween(from, to, time);
                     }
                 }

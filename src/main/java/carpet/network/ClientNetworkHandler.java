@@ -16,73 +16,57 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
-import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public class ClientNetworkHandler
-{
+public class ClientNetworkHandler {
     private static final Map<String, BiConsumer<LocalPlayer, Tag>> dataHandlers = new HashMap<String, BiConsumer<LocalPlayer, Tag>>();
 
-    static
-    {
-        dataHandlers.put(CarpetClient.HI, (p, t) -> onHi(t.getAsString()));
+    static {
+        dataHandlers.put(CarpetClient.HI, (p, t) -> onHi(t.asString().orElseThrow()));
         dataHandlers.put("Rules", (p, t) -> {
             CompoundTag ruleset = (CompoundTag) t;
-            for (String ruleKey : ruleset.getAllKeys())
-            {
+            for (String ruleKey : ruleset.keySet()) {
                 CompoundTag ruleNBT = (CompoundTag) ruleset.get(ruleKey);
                 SettingsManager manager = null;
                 String ruleName;
-                if (ruleNBT.contains("Manager"))
-                {
-                    ruleName = ruleNBT.getString("Rule");
-                    String managerName = ruleNBT.getString("Manager");
-                    if (managerName.equals("carpet"))
-                    {
+                if (ruleNBT.contains("Manager")) {
+                    ruleName = ruleNBT.getString("Rule").orElseThrow();
+                    String managerName = ruleNBT.getString("Manager").orElseThrow();
+                    if (managerName.equals("carpet")) {
                         manager = CarpetServer.settingsManager;
-                    }
-                    else
-                    {
-                        for (CarpetExtension extension : CarpetServer.extensions)
-                        {
+                    } else {
+                        for (CarpetExtension extension : CarpetServer.extensions) {
                             SettingsManager eManager = extension.extensionSettingsManager();
-                            if (eManager != null && managerName.equals(eManager.identifier()))
-                            {
+                            if (eManager != null && managerName.equals(eManager.identifier())) {
                                 manager = eManager;
                                 break;
                             }
                         }
                     }
-                }
-                else // Backwards compatibility
+                } else // Backwards compatibility
                 {
                     manager = CarpetServer.settingsManager;
                     ruleName = ruleKey;
                 }
                 CarpetRule<?> rule = (manager != null) ? manager.getCarpetRule(ruleName) : null;
-                if (rule != null)
-                {
-                    String value = ruleNBT.getString("Value");
-                    try
-                    {
+                if (rule != null) {
+                    String value = ruleNBT.getString("Value").orElseThrow();
+                    try {
                         rule.set(null, value);
-                    }
-                    catch (InvalidRuleValueException ignored)
-                    {
+                    } catch (InvalidRuleValueException ignored) {
                     }
                 }
             }
         });
         dataHandlers.put("scShape", (p, t) -> { // deprecated // and unused // should remove for 1.17
-            if (CarpetClient.shapes != null)
-            {
+            if (CarpetClient.shapes != null) {
                 CarpetClient.shapes.addShape((CompoundTag) t);
             }
         });
         dataHandlers.put("scShapes", (p, t) -> {
-            if (CarpetClient.shapes != null)
-            {
+            if (CarpetClient.shapes != null) {
                 CarpetClient.shapes.addShapes((ListTag) t);
             }
         });
@@ -91,16 +75,12 @@ public class ClientNetworkHandler
 
     // Ran on the Main Minecraft Thread
 
-    private static void onHi(String version)
-    {
+    private static void onHi(String version) {
         CarpetClient.setCarpet();
         CarpetClient.serverCarpetVersion = version;
-        if (CarpetSettings.carpetVersion.equals(CarpetClient.serverCarpetVersion))
-        {
+        if (CarpetSettings.carpetVersion.equals(CarpetClient.serverCarpetVersion)) {
             CarpetSettings.LOG.info("Joined carpet server with matching carpet version");
-        }
-        else
-        {
+        } else {
             CarpetSettings.LOG.warn("Joined carpet server with another carpet version: " + CarpetClient.serverCarpetVersion);
         }
         // We can ensure that this packet is
@@ -108,46 +88,31 @@ public class ClientNetworkHandler
         respondHello();
     }
 
-    public static void respondHello()
-    {
+    public static void respondHello() {
         CompoundTag data = new CompoundTag();
         data.putString(CarpetClient.HELLO, CarpetSettings.carpetVersion);
-        CarpetClient.getPlayer().connection.send(new ServerboundCustomPayloadPacket(
-                new CarpetClient.CarpetPayload(data)
-        ));
-
-        PacketDistributor.sendToServer(new CarpetClient.CarpetPayload(data));
+        ClientPacketDistributor.sendToServer(new CarpetClient.CarpetPayload(data));
     }
 
-    public static void onServerData(final CarpetClient.CarpetPayload payload, final IPayloadContext context)
-    {
+    public static void onServerData(CarpetClient.CarpetPayload payload, final IPayloadContext context) {
         context.enqueueWork(() -> {
             CompoundTag compound = payload.data();
             LocalPlayer player = (LocalPlayer) context.player();
-
-            for (String key : compound.getAllKeys())
-            {
-                if (dataHandlers.containsKey(key))
-                {
-                    try
-                    {
+            for (String key : compound.keySet()) {
+                if (dataHandlers.containsKey(key)) {
+                    try {
                         dataHandlers.get(key).accept(player, compound.get(key));
-                    }
-                    catch (Exception exc)
-                    {
+                    } catch (Exception exc) {
                         CarpetSettings.LOG.info("Corrupt carpet data for " + key);
                     }
-                }
-                else
-                {
+                } else {
                     CarpetSettings.LOG.error("Unknown carpet data: " + key);
                 }
             }
         });
     }
 
-    public static void clientCommand(String command)
-    {
+    public static void clientCommand(String command) {
         CompoundTag tag = new CompoundTag();
         tag.putString("id", command);
         tag.putString("command", command);

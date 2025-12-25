@@ -1,6 +1,9 @@
 package carpet.mixins;
 
+import carpet.fakes.EntityInterface;
 import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
+import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.item.crafting.RecipeManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -51,12 +54,19 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
 {
     @Shadow public ServerPlayer player;
 
-    @Inject(method = "handlePlayerInput", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerPlayer;setPlayerInput(FFZZ)V"))
+    @Inject(method = "handlePlayerInput", at = @At("HEAD"))
     private void checkMoves(ServerboundPlayerInputPacket p, CallbackInfo ci)
     {
-        if (PLAYER_RIDES.isNeeded() && (p.getXxa() != 0.0F || p.getZza() != 0.0F || p.isJumping() || p.isShiftKeyDown()))
+        // todo this may not ride on the right thread moment, so needs to be checked
+
+        Input input = p.input();
+
+        if (player.getVehicle() != null && !((EntityInterface)player.getVehicle()).isPermanentVehicle()) // won't since that method makes sure its not null
+            player.setShiftKeyDown(p.input().shift());
+
+        if (PLAYER_RIDES.isNeeded() && (input.jump() || input.shift() || input.forward() || input.backward() || input.left() || input.right()))
         {
-            PLAYER_RIDES.onMountControls(player, p.getXxa(), p.getZza(), p.isJumping(), p.isShiftKeyDown());
+            PLAYER_RIDES.onMountControls(player, input.left() == input.right() ? 0 : (input.left() ? -1 : 1 ), input.forward() == input.backward() ? 0 : (input.forward() ? 1 : -1), input.jump(), input.shift());
         }
     }
 
@@ -72,17 +82,17 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
             ci.cancel();
         }
     }
-
-    @Inject(method = "handlePlayerAction", cancellable = true, at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;getItemInHand(Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/item/ItemStack;",
-            ordinal = 0,
-            shift = At.Shift.BEFORE
-    ))
-    private void onHandSwap(ServerboundPlayerActionPacket playerActionC2SPacket_1, CallbackInfo ci)
-    {
-        if(PLAYER_SWAPS_HANDS.onPlayerEvent(player)) ci.cancel();
-    }
+//
+//    @Inject(method = "handlePlayerAction", cancellable = true, at = @At(
+//            value = "INVOKE",
+//            target = "Lnet/minecraft/server/level/ServerPlayer;getItemInHand(Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/item/ItemStack;",
+//            ordinal = 0,
+//            shift = At.Shift.BEFORE
+//    ))
+//    private void onHandSwap(ServerboundPlayerActionPacket playerActionC2SPacket_1, CallbackInfo ci)
+//    {
+//        if(PLAYER_SWAPS_HANDS.onPlayerEvent(player)) ci.cancel();
+//    }
 
     @Inject(method = "handlePlayerAction", cancellable = true, at = @At(
             value = "INVOKE",
@@ -170,24 +180,25 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
         }
     }
 
-    @Inject(method = "handlePlayerCommand", at = @At(
+    @Inject(method = "handlePlayerInput", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setShiftKeyDown(Z)V",
-            ordinal = 0
+            target = "Lnet/minecraft/server/level/ServerPlayer;setLastClientInput(Lnet/minecraft/world/entity/player/Input;)V"
     ))
-    private void onStartSneaking(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
+    private void onStartSneaking(ServerboundPlayerInputPacket serverboundPlayerInputPacket, CallbackInfo ci)
     {
-        PLAYER_STARTS_SNEAKING.onPlayerEvent(player);
-    }
-
-    @Inject(method = "handlePlayerCommand", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/level/ServerPlayer;setShiftKeyDown(Z)V",
-            ordinal = 1
-    ))
-    private void onStopSneaking(ServerboundPlayerCommandPacket clientCommandC2SPacket_1, CallbackInfo ci)
-    {
-        PLAYER_STOPS_SNEAKING.onPlayerEvent(player);
+        boolean wasDown = player.isShiftKeyDown();
+        boolean isDown = serverboundPlayerInputPacket.input().shift();
+        if (wasDown != isDown)
+        {
+            if (isDown)
+            {
+                PLAYER_STARTS_SNEAKING.onPlayerEvent(player);
+            }
+            else
+            {
+                PLAYER_STOPS_SNEAKING.onPlayerEvent(player);
+            }
+        }
     }
 
     @Inject(method = "handlePlayerCommand", at = @At(
@@ -246,16 +257,20 @@ public class ServerGamePacketListenerImpl_scarpetEventsMixin
     {
         if (PLAYER_CHOOSES_RECIPE.isNeeded())
         {
-            if(PLAYER_CHOOSES_RECIPE.onRecipeSelected(player, packet.getRecipe(), packet.isShiftDown())) ci.cancel();
+            RecipeManager.ServerDisplayInfo displayInfo = player.level().getServer().getRecipeManager().getRecipeFromDisplay(packet.recipe());
+            if (displayInfo == null) {
+                return;
+            }
+            if(PLAYER_CHOOSES_RECIPE.onRecipeSelected(player, displayInfo.parent().id().location(), packet.useMaxItems())) ci.cancel();
         }
     }
 
     @Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
     private void onUpdatedSelectedSLot(ServerboundSetCarriedItemPacket packet, CallbackInfo ci)
     {
-        if (PLAYER_SWITCHES_SLOT.isNeeded() && player.getServer() != null && player.getServer().isSameThread())
+        if (PLAYER_SWITCHES_SLOT.isNeeded() && player.level().getServer() != null && player.level().getServer().isSameThread())
         {
-            PLAYER_SWITCHES_SLOT.onSlotSwitch(player, player.getInventory().selected, packet.getSlot());
+            PLAYER_SWITCHES_SLOT.onSlotSwitch(player, player.getInventory().getSelectedSlot(), packet.getSlot());
         }
     }
 

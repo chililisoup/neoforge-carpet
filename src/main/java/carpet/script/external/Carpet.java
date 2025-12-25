@@ -141,7 +141,7 @@ public class Carpet
     @Nullable
     public static Module fetchGlobalModule(String name, boolean allowLibraries) throws IOException
     {
-        if (FMLLoader.getDist().isClient())
+        if (FMLLoader.getCurrent().getDist().isClient())
         {
             Path globalFolder = FMLPaths.CONFIGDIR.get().resolve("carpet/scripts");
             if (!Files.exists(globalFolder))
@@ -165,7 +165,7 @@ public class Carpet
 
     public static void addGlobalModules(final List<String> moduleNames, boolean includeBuiltIns) throws IOException
     {
-        if (includeBuiltIns && FMLLoader.getDist().isClient())
+        if (includeBuiltIns && FMLLoader.getCurrent().getDist().isClient())
         {
             Path globalScripts = FMLPaths.CONFIGDIR.get().resolve("carpet/scripts");
             if (!Files.exists(globalScripts))

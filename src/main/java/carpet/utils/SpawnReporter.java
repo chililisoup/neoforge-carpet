@@ -12,12 +12,14 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.random.Weighted;
+import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.animal.Ocelot;
 import net.minecraft.world.item.DyeColor;
@@ -380,7 +382,7 @@ public class SpawnReporter
         }
         if (entity instanceof Ocelot)
         {
-            for (Entity e: entity.getCommandSenderWorld().getEntities(entity, entity.getBoundingBox()))
+            for (Entity e: entity.level().getEntities(entity, entity.getBoundingBox()))
             {
                 e.discard();
             }
@@ -389,8 +391,8 @@ public class SpawnReporter
     }
 
     // yeeted from NaturalSpawner - temporary access fix
-    private static List<MobSpawnSettings.SpawnerData> getSpawnEntries(ServerLevel serverLevel, StructureManager structureManager, ChunkGenerator chunkGenerator, MobCategory mobCategory, BlockPos blockPos, @Nullable Holder<Biome> holder) {
-        return NaturalSpawner.isInNetherFortressBounds(blockPos, serverLevel, mobCategory, structureManager) ? NetherFortressStructure.FORTRESS_ENEMIES.unwrap() : chunkGenerator.getMobsAt(holder != null ? holder : serverLevel.getBiome(blockPos), structureManager, mobCategory, blockPos).unwrap();
+    private static WeightedList<MobSpawnSettings.SpawnerData> getSpawnEntries(ServerLevel serverLevel, StructureManager structureManager, ChunkGenerator chunkGenerator, MobCategory mobCategory, BlockPos blockPos, @Nullable Holder<Biome> holder) {
+        return NaturalSpawner.isInNetherFortressBounds(blockPos, serverLevel, mobCategory, structureManager) ? NetherFortressStructure.FORTRESS_ENEMIES : chunkGenerator.getMobsAt(holder != null ? holder : serverLevel.getBiome(blockPos), structureManager, mobCategory, blockPos);
     }
 
     public static List<Component> report(BlockPos pos, ServerLevel worldIn)
@@ -407,21 +409,22 @@ public class SpawnReporter
         for (MobCategory category : cachedMobCategories())
         {
             String categoryCode = String.valueOf(category).substring(0, 3);
-            List<MobSpawnSettings.SpawnerData> lst = getSpawnEntries(worldIn, worldIn.structureManager(), worldIn.getChunkSource().getGenerator(), category, pos, worldIn.getBiome(pos));
+            WeightedList<MobSpawnSettings.SpawnerData> lst = getSpawnEntries(worldIn, worldIn.structureManager(), worldIn.getChunkSource().getGenerator(), category, pos, worldIn.getBiome(pos));
             if (lst != null && !lst.isEmpty())
             {
-                for (MobSpawnSettings.SpawnerData spawnEntry : lst)
+                for (Weighted<MobSpawnSettings.SpawnerData> wspawnEntry : lst.unwrap())
                 {
-                    if (SpawnPlacements.getPlacementType(spawnEntry.type) == null)
+                    MobSpawnSettings.SpawnerData spawnEntry = wspawnEntry.value();
+                    if (SpawnPlacements.getPlacementType(spawnEntry.type()) == null)
                         continue; // vanilla bug
-                    boolean canSpawn = SpawnPlacements.isSpawnPositionOk(spawnEntry.type, worldIn, pos);
+                    boolean canSpawn = SpawnPlacements.isSpawnPositionOk(spawnEntry.type(), worldIn, pos);
                     int willSpawn = -1;
                     boolean fits = false;
                     
                     Mob mob;
                     try
                     {
-                        mob = (Mob) spawnEntry.type.create(worldIn);
+                        mob = (Mob) spawnEntry.type().create(worldIn, EntitySpawnReason.NATURAL);
                     }
                     catch (Exception e)
                     {
@@ -436,16 +439,16 @@ public class SpawnReporter
                         {
                             float f = x + 0.5F;
                             float f1 = z + 0.5F;
-                            mob.moveTo(f, y, f1, worldIn.random.nextFloat() * 360.0F, 0.0F);
+                            mob.snapTo(f, y, f1, worldIn.random.nextFloat() * 360.0F, 0.0F);
                             fits = worldIn.noCollision(mob);
                             EntityType<?> etype = mob.getType();
 
                             for (int i = 0; i < 20; ++i)
                             {
                                 if (
-                                        SpawnPlacements.checkSpawnRules(etype,worldIn, MobSpawnType.NATURAL, pos, worldIn.random) &&
+                                        SpawnPlacements.checkSpawnRules(etype,worldIn, EntitySpawnReason.NATURAL, pos, worldIn.random) &&
                                         SpawnPlacements.isSpawnPositionOk(etype, worldIn, pos) &&
-                                        mob.checkSpawnRules(worldIn, MobSpawnType.NATURAL)
+                                        mob.checkSpawnRules(worldIn, EntitySpawnReason.NATURAL)
                                     // && mob.canSpawn(worldIn) // entity collisions // mostly - except ocelots
                                 )
                                 {
@@ -459,7 +462,7 @@ public class SpawnReporter
                                     willSpawn += 1;
                                 }
                             }
-                            mob.finalizeSpawn(worldIn, worldIn.getCurrentDifficultyAt(mob.blockPosition()), MobSpawnType.NATURAL, null);
+                            mob.finalizeSpawn(worldIn, worldIn.getCurrentDifficultyAt(mob.blockPosition()), EntitySpawnReason.NATURAL, null);
                             // the code invokes onInitialSpawn after getCanSpawHere
                             fits = fits && worldIn.noCollision(mob);
                             
@@ -467,7 +470,7 @@ public class SpawnReporter
                             
                             try
                             {
-                                mob = (Mob) spawnEntry.type.create(worldIn);
+                                mob = (Mob) spawnEntry.type().create(worldIn, EntitySpawnReason.NATURAL);
                             }
                             catch (Exception e)
                             {
@@ -479,12 +482,12 @@ public class SpawnReporter
                     
                     String mobTypeName = mob.getType().getDescription().getString();
                     //String pack_size = Integer.toString(mob.getMaxSpawnClusterSize());//String.format("%d-%d", animal.minGroupCount, animal.maxGroupCount);
-                    int weight = spawnEntry.getWeight().asInt();
+                    int weight = wspawnEntry.weight();
                     if (canSpawn)
                     {
                         String color = (fits && willSpawn > 0) ? "e" : "gi";
                         rep.add(Messenger.c(
-                                String.format("%s %s: %s (%d:%d-%d/%d), can: ", color, categoryCode, mobTypeName, weight, spawnEntry.minCount, spawnEntry.maxCount,  mob.getMaxSpawnClusterSize()),
+                                String.format("%s %s: %s (%d:%d-%d/%d), can: ", color, categoryCode, mobTypeName, weight, spawnEntry.minCount(), spawnEntry.maxCount(),  mob.getMaxSpawnClusterSize()),
                                 "l YES",
                                 color + " , fit: ",
                                 (fits ? "l YES" : "r NO"),
@@ -494,7 +497,7 @@ public class SpawnReporter
                     }
                     else
                     {
-                        rep.add(Messenger.c(String.format("gi %s: %s (%d:%d-%d/%d), can: ", categoryCode, mobTypeName, weight, spawnEntry.minCount, spawnEntry.maxCount, mob.getMaxSpawnClusterSize()), "n NO"));
+                        rep.add(Messenger.c(String.format("gi %s: %s (%d:%d-%d/%d), can: ", categoryCode, mobTypeName, weight, spawnEntry.minCount(), spawnEntry.maxCount(), mob.getMaxSpawnClusterSize()), "n NO"));
                     }
                     killEntity(mob);
                 }
