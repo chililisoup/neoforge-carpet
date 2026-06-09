@@ -95,7 +95,7 @@ public class ClientNetworkHandler
     {
         CarpetClient.setCarpet();
         CarpetClient.serverCarpetVersion = version;
-        if (CarpetSettings.carpetVersion.equals(CarpetClient.serverCarpetVersion))
+        if (CarpetSettings.carpetVersion().equals(CarpetClient.serverCarpetVersion))
         {
             CarpetSettings.LOG.info("Joined carpet server with matching carpet version");
         }
@@ -111,7 +111,7 @@ public class ClientNetworkHandler
     public static void respondHello()
     {
         CompoundTag data = new CompoundTag();
-        data.putString(CarpetClient.HELLO, CarpetSettings.carpetVersion);
+        data.putString(CarpetClient.HELLO, CarpetSettings.carpetVersion());
         CarpetClient.getPlayer().connection.send(new ServerboundCustomPayloadPacket(
                 new CarpetClient.CarpetPayload(data)
         ));

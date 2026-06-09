@@ -47,12 +47,24 @@ import static carpet.api.settings.RuleCategory.CLIENT;
 @SuppressWarnings({"CanBeFinal", "removal"}) // removal should be removed after migrating rules to the new system
 public class CarpetSettings
 {
-    public static final String carpetVersion = ModList.get().getModContainerById("carpet").orElseThrow().getModInfo().getVersion().toString();
-    public static final int [] releaseTarget = {
-            ModList.get().getModContainerById("minecraft").orElseThrow().getModInfo().getVersion().getMinorVersion(),
-            ModList.get().getModContainerById("minecraft").orElseThrow().getModInfo().getVersion().getIncrementalVersion()
-    };
     public static final Logger LOG = LoggerFactory.getLogger("carpet");
+
+    private static final class LazyVersion {
+        static final String CARPET = ModList.get().getModContainerById("carpet")
+                .orElseThrow(() -> new RuntimeException("Carpet mod not found in ModList"))
+                .getModInfo().getVersion().toString();
+        static final int[] RELEASE_TARGET = new int[]{
+                ModList.get().getModContainerById("minecraft")
+                        .orElseThrow(() -> new RuntimeException("Minecraft mod not found in ModList"))
+                        .getModInfo().getVersion().getMinorVersion(),
+                ModList.get().getModContainerById("minecraft")
+                        .orElseThrow(() -> new RuntimeException("Minecraft mod not found in ModList"))
+                        .getModInfo().getVersion().getIncrementalVersion()
+        };
+    }
+
+    public static String carpetVersion() { return LazyVersion.CARPET; }
+    public static int[] releaseTarget() { return LazyVersion.RELEASE_TARGET; }
     public static final ThreadLocal<Boolean> skipGenerationChecks = ThreadLocal.withInitial(() -> false);
     public static final ThreadLocal<Boolean> impendingFillSkipUpdates = ThreadLocal.withInitial(() -> false);
     public static int runPermissionLevel = 2;
