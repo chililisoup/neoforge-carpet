@@ -101,6 +101,11 @@ public class SpawnReporter
         if (multiline)
             lst.add(Messenger.s(String.format("Mobcaps for %s:",name)));
         NaturalSpawner.SpawnState lastSpawner = world.getChunkSource().getLastSpawnState();
+        if (lastSpawner == null)
+        {
+            lst.add(Messenger.c("g   --UNAVAILABLE--"));
+            return lst;
+        }
         Object2IntMap<MobCategory> dimCounts = lastSpawner.getMobCategoryCounts();
         int chunkcount = chunkCounts.getOrDefault(dim, -1);
         if (dimCounts == null || chunkcount < 0)

@@ -115,7 +115,7 @@ public class Carpet
 
     public static String getCarpetVersion()
     {
-        return CarpetSettings.carpetVersion;
+        return CarpetSettings.carpetVersion();
     }
 
     @Nullable

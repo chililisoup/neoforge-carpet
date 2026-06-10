@@ -185,7 +185,7 @@ public class Vanilla
 
     public static int [] MinecraftServer_getReleaseTarget(MinecraftServer server)
     {
-        return CarpetSettings.releaseTarget;
+        return CarpetSettings.releaseTarget();
     }
 
     public static boolean isDevelopmentEnvironment()

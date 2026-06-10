@@ -43,7 +43,7 @@ public class ServerNetworkHandler
             if (playerEntity.connection.hasChannel(CarpetClient.CARPET_CHANNEL))
             {
                 CompoundTag data = new CompoundTag();
-                data.putString(CarpetClient.HI, CarpetSettings.carpetVersion);
+                data.putString(CarpetClient.HI, CarpetSettings.carpetVersion());
                 PacketDistributor.sendToPlayer(playerEntity, new CarpetClient.CarpetPayload(data));
             }
         }
@@ -57,7 +57,7 @@ public class ServerNetworkHandler
     {
         validCarpetPlayers.add(playerEntity);
         remoteCarpetPlayers.put(playerEntity, version);
-        if (version.equals(CarpetSettings.carpetVersion))
+        if (version.equals(CarpetSettings.carpetVersion()))
         {
             CarpetSettings.LOG.info("Player " + playerEntity.getName().getString() + " joined with a matching carpet client");
         }
@@ -200,7 +200,7 @@ public class ServerNetworkHandler
         }
         if (validCarpetPlayers.contains(player))
         {
-            return "carpet " + CarpetSettings.carpetVersion;
+            return "carpet " + CarpetSettings.carpetVersion();
         }
         return "vanilla";
     }
